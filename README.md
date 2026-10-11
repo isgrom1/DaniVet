@@ -39,6 +39,7 @@ Aplicación web instalable (PWA) para una médica veterinaria independiente que 
 
 - **Unitarias (Vitest):** 42 de 42 aprobadas en 7 archivos: cifrado y bóveda, integridad referencial, conflictos, consultas y enmiendas, calculadora de dosis, finanzas, recordatorios, duplicados, agenda, respaldo/restauración/manipulación, PDF con extracción de texto y migraciones de datos.
 - **Extremo a extremo (Playwright, Chromium emulando iPhone SE, iPhone 15 y iPhone 15 Pro Max):** 6 de 6 aprobadas, en `/` y también bajo la ruta `/DaniVet/` que usará GitHub Pages. El flujo de aceptación tiene 20 pasos: cuenta → tutor → dos animales → visita → consulta → tratamiento → vacuna → receta PDF → cobro y pago → cerrar y reabrir → persistencia → enmienda → respaldo y exportación → reglas de acceso → restauración en otro teléfono → sin conexión.
+- **En GitHub Actions** (servidores de GitHub): tipos, unitarias, compilación y las 6 pruebas E2E aprobadas ([ejecución n.º 1](https://github.com/isgrom1/DaniVet/actions/runs/38176565733)). Cada cambio vuelve a ejecutarlas.
 - **No probado en un iPhone real** (no hay Safari/WebKit en este entorno). Detalle en [docs/pruebas.md](docs/pruebas.md).
 
 ## Acciones pendientes que solo puede hacer la persona dueña del repositorio

@@ -12,6 +12,7 @@ Ejecutadas el 11 de octubre de 2026 sobre el código de esta rama. Todas las cif
 | Dependencias (`npm audit`) | 0 vulnerabilidades |
 | Extremo a extremo (Playwright) en `/` | **6 / 6 aprobadas** (2 min 5 s) |
 | Extremo a extremo bajo `/DaniVet/` (ruta de GitHub Pages) | **6 / 6 aprobadas** (2 min 8 s) |
+| Las mismas pruebas en GitHub Actions (servidores de GitHub, Ubuntu) | **Aprobadas**: tipos, 42 unitarias, compilación y 6 / 6 E2E (2,3 min) en la [ejecución n.º 1](https://github.com/isgrom1/DaniVet/actions/runs/38176565733) |
 | Contra la URL publicada | **Pendiente**: se ejecuta automáticamente en GitHub Actions cuando Pages esté activado |
 | En un iPhone real | **No realizada** (ver "Lo que no se pudo probar") |
 
