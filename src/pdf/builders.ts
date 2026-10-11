@@ -12,9 +12,10 @@ import { patientAlerts, primaryTutor, speciesName, latestWeight } from '@/featur
 import { chargeBalance, chargeState, docTotal, itemsSubtotal, lineTotal, paidFor } from '@/features/finance/calc';
 import { useDataStore } from '@/data/store';
 import { PdfWriter } from './engine';
+import { DEFAULT_APP_NAME } from '@/lib/platform';
 
 const SIGNATURE_CAPTION = 'Firma digitalizada (imagen). No constituye firma electrónica avanzada.';
-const GENERATED = 'Documento generado con VetCasa a partir de los registros de la profesional.';
+const generated = (p?: Profile) => `Documento generado con ${p?.appName || DEFAULT_APP_NAME} a partir de los registros de la profesional.`;
 
 async function imageBytes(att?: Attachment): Promise<Uint8Array | undefined> {
   if (!att || !att.mimeType.startsWith('image/')) return undefined;
@@ -54,7 +55,7 @@ function patientRows(p: Patient, tutor?: Tutor): Array<[string, string | undefin
 }
 
 function footer(p?: Profile, extra?: string): string {
-  return [extra, p?.documentFooter, GENERATED].filter(Boolean).join(' ');
+  return [extra, p?.documentFooter, generated(p)].filter(Boolean).join(' ');
 }
 
 // ---------------------------------------------------------------------------

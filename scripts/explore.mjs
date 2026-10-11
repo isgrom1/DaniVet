@@ -31,7 +31,7 @@ await shot('03-clave-recuperacion');
 await page.getByRole('checkbox').check();
 await page.getByRole('button', { name: 'Continuar' }).click();
 await page.getByRole('button', { name: 'Ahora no' }).click();
-await page.getByRole('button', { name: 'Comenzar a usar VetCasa' }).click();
+await page.getByRole('button', { name: /^Comenzar a usar / }).click();
 await page.waitForTimeout(500);
 await shot('04-inicio-vacio');
 await page.goto(`${url}#/ajustes/demo`);

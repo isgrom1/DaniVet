@@ -23,6 +23,7 @@ import { AlertsPanel } from '@/features/patients/AlertsPanel';
 import { startConsultation } from '@/features/consultations/actions';
 import { appointmentIcs, apptEnd } from './selectors';
 import { capitalizeFirst } from '@/lib/text';
+import { DEFAULT_APP_NAME } from '@/lib/platform';
 
 const FLOW: AppointmentStatus[] = ['pending', 'confirmed', 'en_route', 'in_progress', 'completed'];
 
@@ -49,7 +50,7 @@ export function AppointmentDetail() {
   const tutor = tables.tutors.get(a.tutorId);
   const patients = a.patientIds.map((pid) => tables.patients.get(pid)).filter((p): p is NonNullable<typeof p> => !!p);
   const consultations = a.consultationIds.map((cid) => tables.consultations.get(cid)).filter((c): c is NonNullable<typeof c> => !!c);
-  const appName = profile?.appName || 'VetCasa';
+  const appName = profile?.appName || DEFAULT_APP_NAME;
 
   const setStatus = async (status: AppointmentStatus) => {
     try {

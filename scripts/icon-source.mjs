@@ -1,4 +1,4 @@
-// Ícono original de VetCasa: casa con huella. Diseño propio (no deriva de marcas de terceros).
+// Ícono original de la app: casa con huella. Diseño propio (no deriva de marcas de terceros).
 export const BRAND = '#1f5f57';
 export const CREAM = '#f7f4ef';
 export const ACCENT = '#d9825b';

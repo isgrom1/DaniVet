@@ -8,9 +8,10 @@ import { fileURLToPath } from 'node:url';
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string };
 
-// Nombre visible de la app instalada (pantalla de inicio). Se puede cambiar sin tocar el código
-// definiendo VITE_APP_NAME al compilar. Dentro de la app, el nombre también se edita en Ajustes.
-const APP_NAME = process.env.VITE_APP_NAME || 'VetCasa';
+// Nombre visible de la app: pantalla de inicio, título, textos, PDF y nombres de archivo.
+// Para cambiarlo, edita este valor (o define VITE_APP_NAME al compilar) y publica.
+// Los identificadores internos ("vetcasa" en la base de datos, el cifrado y el formato de respaldo) no cambian.
+const APP_NAME = process.env.VITE_APP_NAME || 'DApp';
 // Ruta base del sitio. En GitHub Pages (sitio de proyecto) es "/<repositorio>/".
 const BASE_PATH = process.env.BASE_PATH || '/';
 
@@ -18,6 +19,12 @@ const BASE_PATH = process.env.BASE_PATH || '/';
  * Política de seguridad de contenidos (CSP) aplicada solo a la compilación de producción.
  * La app no realiza solicitudes a servidores externos: todo se procesa en el dispositivo.
  */
+/** Reemplaza %APP_NAME% en index.html (título y nombre para la pantalla de inicio del iPhone). */
+function appNameInHtml(): Plugin {
+  const escaped = APP_NAME.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  return { name: 'app-name', transformIndexHtml: (html) => html.replaceAll('%APP_NAME%', escaped) };
+}
+
 function contentSecurityPolicy(): Plugin {
   const csp = [
     "default-src 'self'",
@@ -59,6 +66,7 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
+    appNameInHtml(),
     contentSecurityPolicy(),
     VitePWA({
       registerType: 'prompt',

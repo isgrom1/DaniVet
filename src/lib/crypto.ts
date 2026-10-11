@@ -1,5 +1,5 @@
 /**
- * Criptografía local de VetCasa (WebCrypto, sin dependencias externas).
+ * Criptografía local de la app (WebCrypto, sin dependencias externas).
  *
  * Esquema:
  * - Se genera una clave de datos (DEK) aleatoria de 256 bits al crear la cuenta.
@@ -9,6 +9,8 @@
  * - Cada registro y cada archivo se cifra con AES-256-GCM usando la DEK, IV aleatorio de 96 bits
  *   y datos asociados (AAD) que lo vinculan a su tabla e identificador.
  */
+
+import { APP_SLUG } from './platform';
 
 const enc = new TextEncoder();
 const dec = new TextDecoder();
@@ -279,7 +281,7 @@ export function passphraseStrength(p: string): { score: number; label: string; o
   const classes = [/[a-záéíóúñü]/, /[A-ZÁÉÍÓÚÑÜ]/, /\d/, /[^A-Za-z0-9áéíóúñüÁÉÍÓÚÑÜ]/].filter((r) => r.test(p)).length;
   if (classes >= 2) score++;
   if (classes >= 3 || (p.length >= 18 && /\s/.test(p))) score++;
-  const common = /^(1234|password|contrase|qwerty|vetcasa|111111|abcd)/i.test(p);
+  const common = /^(1234|password|contrase|qwerty|vetcasa|111111|abcd)/i.test(p) || p.toLowerCase().startsWith(APP_SLUG);
   if (common) score = Math.min(score, 1);
   const labels = ['Muy débil', 'Débil', 'Aceptable', 'Buena', 'Muy buena'];
   return { score, label: labels[score], ok: p.length >= 10 && score >= 2 };

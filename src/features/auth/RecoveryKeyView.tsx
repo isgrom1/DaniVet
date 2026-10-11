@@ -5,10 +5,12 @@ import { Checkbox } from '@/components/form';
 import { Notice } from '@/components/Card';
 import { toast } from '@/components/overlay';
 import { downloadFile, shareFile } from '@/lib/share';
+import { APP_SLUG, DEFAULT_APP_NAME } from '@/lib/platform';
 
 export function RecoveryKeyView({ recoveryKey, onDone, doneLabel = 'Continuar' }: { recoveryKey: string; onDone: () => void; doneLabel?: string }) {
   const [saved, setSaved] = useState(false);
-  const fileText = `Clave de recuperación de VetCasa\n\n${recoveryKey}\n\nGuárdala en un lugar seguro y separado de tu teléfono (papel en un lugar seguro o un gestor de contraseñas).\nPermite recuperar el acceso si olvidas tu contraseña y abrir tus respaldos.\nNo la compartas con nadie.\n`;
+  const fileName = `clave-recuperacion-${APP_SLUG}.txt`;
+  const fileText = `Clave de recuperación de ${DEFAULT_APP_NAME}\n\n${recoveryKey}\n\nGuárdala en un lugar seguro y separado de tu teléfono (papel en un lugar seguro o un gestor de contraseñas).\nPermite recuperar el acceso si olvidas tu contraseña y abrir tus respaldos.\nNo la compartas con nadie.\n`;
 
   const copy = async () => {
     try {
@@ -20,8 +22,8 @@ export function RecoveryKeyView({ recoveryKey, onDone, doneLabel = 'Continuar' }
   };
   const save = async () => {
     const blob = new Blob([fileText], { type: 'text/plain' });
-    const res = await shareFile(blob, 'clave-recuperacion-vetcasa.txt', 'Clave de recuperación VetCasa').catch(() => 'unsupported' as const);
-    if (res === 'unsupported') downloadFile(blob, 'clave-recuperacion-vetcasa.txt');
+    const res = await shareFile(blob, fileName, `Clave de recuperación ${DEFAULT_APP_NAME}`).catch(() => 'unsupported' as const);
+    if (res === 'unsupported') downloadFile(blob, fileName);
   };
 
   return (

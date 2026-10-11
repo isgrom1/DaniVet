@@ -54,6 +54,18 @@ export function capitalizeFirst(s: string): string {
   return s ? s.charAt(0).toLocaleUpperCase('es-CL') + s.slice(1) : s;
 }
 
+/** Versión de un texto apta para nombres de archivo: "Mi App" → "mi-app". */
+export function slugify(s: string): string {
+  return (
+    s
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'app'
+  );
+}
+
 export function truncate(s: string, n: number): string {
   return s.length > n ? `${s.slice(0, n - 1)}…` : s;
 }

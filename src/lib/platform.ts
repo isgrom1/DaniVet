@@ -1,3 +1,5 @@
+import { slugify } from './text';
+
 /** Detección de plataforma para adaptar instrucciones (no se usa para rastreo). */
 export function isIOS(): boolean {
   if (typeof navigator === 'undefined') return false;
@@ -22,4 +24,6 @@ export function canShareFiles(): boolean {
 
 export const APP_VERSION: string = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev';
 export const BUILD_DATE: string = typeof __BUILD_DATE__ !== 'undefined' ? __BUILD_DATE__ : '';
-export const DEFAULT_APP_NAME: string = typeof __APP_NAME__ !== 'undefined' ? __APP_NAME__ : 'VetCasa';
+export const DEFAULT_APP_NAME: string = typeof __APP_NAME__ !== 'undefined' ? __APP_NAME__ : 'DApp';
+/** Nombre de la app para archivos (p. ej., "dapp"): respaldos, exportaciones y clave de recuperación. */
+export const APP_SLUG: string = slugify(DEFAULT_APP_NAME);

@@ -5,19 +5,24 @@ import { getAllRecords, getBlob, getMeta, setMeta, wipeAll, withDb, type StoredB
 import { aadFor, loadAll } from '@/data/repo';
 import { setDek } from '@/data/vaultKey';
 import { currentDataVersion, DATA_VERSION_KEY } from '@/data/migrations';
-import { APP_VERSION } from '@/lib/platform';
+import { APP_SLUG, APP_VERSION, DEFAULT_APP_NAME } from '@/lib/platform';
 import { allOf, useDataStore } from '@/data/store';
 import { toCSV } from '@/lib/csv';
 import { readBlob } from '@/features/attachments/attachments';
 
 /**
- * Respaldo cifrado (.vetcasa):
+ * Respaldo cifrado (archivo .<nombre de la app>, p. ej. .dapp; también se aceptan los .vetcasa):
  *  - Es un archivo ZIP con: manifest.json (cabecera con la clave de datos envuelta por la contraseña y por la clave
  *    de recuperación), records.json (registros tal como están guardados: cifrados) y blobs/<id>.bin (adjuntos cifrados).
  *  - Nada del contenido clínico queda legible sin la contraseña o la clave de recuperación vigentes al crear el respaldo.
  *  - Incluye una suma SHA-256 de records.json para detectar archivos dañados.
  */
+// Identificador interno del formato: no cambia aunque cambie el nombre de la app.
 export const BACKUP_FORMAT = 'vetcasa-backup';
+/** Extensión de los respaldos nuevos (según el nombre de la app). */
+export const BACKUP_EXT = APP_SLUG;
+/** Archivos que se ofrecen al elegir un respaldo. El contenido se valida, no la extensión. */
+export const BACKUP_ACCEPT = [...new Set([`.${BACKUP_EXT}`, '.vetcasa'])].join(',') + ',application/octet-stream,application/zip';
 export const BACKUP_VERSION = 1;
 
 interface Manifest {
@@ -87,13 +92,13 @@ export async function createEncryptedBackup(opts: { includeAttachments: boolean 
   files['manifest.json'] = strToU8(JSON.stringify(manifest, null, 2));
   files['records.json'] = [recordsBytes, { level: 6 }];
   files['LEEME.txt'] = strToU8(
-    'Respaldo cifrado de VetCasa.\nPara restaurarlo, abre VetCasa y elige "Restaurar desde un respaldo". Se necesita la contraseña vigente al crear el respaldo o la clave de recuperación.\nEl contenido está cifrado con AES-256-GCM: este archivo no puede leerse sin esas claves.\n',
+    `Respaldo cifrado de ${DEFAULT_APP_NAME}.\nPara restaurarlo, abre ${DEFAULT_APP_NAME} y elige "Restaurar desde un respaldo". Se necesita la contraseña vigente al crear el respaldo o la clave de recuperación.\nEl contenido está cifrado con AES-256-GCM: este archivo no puede leerse sin esas claves.\n`,
   );
   const zipped = zipSync(files);
   const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
   const blob = new Blob([zipped as Uint8Array<ArrayBuffer>], { type: 'application/octet-stream' });
   await setMeta('lastBackupAt', new Date().toISOString());
-  return { blob, fileName: `respaldo-vetcasa-${stamp}.vetcasa`, stats: { records: rowsJson.length, blobs: blobCount, bytes: zipped.byteLength } };
+  return { blob, fileName: `respaldo-${APP_SLUG}-${stamp}.${BACKUP_EXT}`, stats: { records: rowsJson.length, blobs: blobCount, bytes: zipped.byteLength } };
 }
 
 export interface ParsedBackup {
@@ -114,20 +119,20 @@ export async function parseBackup(file: Blob): Promise<ParsedBackup> {
   try {
     entries = unzipSync(new Uint8Array(await file.arrayBuffer()));
   } catch {
-    throw new BackupFormatError('El archivo no es un respaldo válido de VetCasa o está dañado.');
+    throw new BackupFormatError(`El archivo no es un respaldo válido de ${DEFAULT_APP_NAME} o está dañado.`);
   }
   const mf = entries['manifest.json'];
   const rec = entries['records.json'];
-  if (!mf || !rec) throw new BackupFormatError('El archivo no es un respaldo válido de VetCasa.');
+  if (!mf || !rec) throw new BackupFormatError(`El archivo no es un respaldo válido de ${DEFAULT_APP_NAME}.`);
   let manifest: Manifest;
   try {
     manifest = JSON.parse(strFromU8(mf)) as Manifest;
   } catch {
     throw new BackupFormatError('El índice del respaldo está dañado.');
   }
-  if (manifest.format !== BACKUP_FORMAT) throw new BackupFormatError('El archivo no es un respaldo de VetCasa.');
+  if (manifest.format !== BACKUP_FORMAT) throw new BackupFormatError(`El archivo no es un respaldo de ${DEFAULT_APP_NAME}.`);
   if (manifest.version > BACKUP_VERSION || (manifest.dataVersion ?? 1) > currentDataVersion())
-    throw new BackupFormatError('Este respaldo fue creado con una versión más nueva de VetCasa. Cierra la app por completo y vuelve a abrirla con conexión a Internet para que se actualice.');
+    throw new BackupFormatError(`Este respaldo fue creado con una versión más nueva de ${DEFAULT_APP_NAME}. Cierra la app por completo y vuelve a abrirla con conexión a Internet para que se actualice.`);
   const sum = await sha256Hex(rec as Uint8Array<ArrayBuffer>);
   if (sum !== manifest.recordsSha256) throw new BackupFormatError('El respaldo está dañado (la verificación de integridad no coincide).');
   const rowsJson = JSON.parse(strFromU8(rec)) as RowJson[];
@@ -244,7 +249,7 @@ export async function verifyBackup(parsed: ParsedBackup, secret: { passphrase?: 
 // ---------------------------------------------------------------------------
 // Exportación abierta (sin cifrar) para migrar a otro sistema
 // ---------------------------------------------------------------------------
-const OPEN_README = `EXPORTACIÓN DE DATOS DE VETCASA (SIN CIFRAR)
+const OPEN_README = `EXPORTACIÓN DE DATOS DE ${DEFAULT_APP_NAME.toUpperCase()} (SIN CIFRAR)
 ============================================
 
 ATENCIÓN: este archivo contiene datos personales y clínicos legibles. Guárdalo en un lugar seguro y
@@ -276,7 +281,7 @@ export async function exportOpenData(opts: { includeAttachments: boolean }): Pro
   const t = useDataStore.getState().tables;
   const files: Zippable = {
     'LEEME.txt': strToU8(OPEN_README),
-    'info.json': strToU8(JSON.stringify({ app: 'VetCasa', appVersion: APP_VERSION, dataVersion: currentDataVersion(), exportedAt: new Date().toISOString() }, null, 2)),
+    'info.json': strToU8(JSON.stringify({ app: DEFAULT_APP_NAME, appVersion: APP_VERSION, dataVersion: currentDataVersion(), exportedAt: new Date().toISOString() }, null, 2)),
   };
   for (const [name, map] of Object.entries(t)) {
     if (name === 'drafts') continue;
@@ -333,5 +338,5 @@ export async function exportOpenData(opts: { includeAttachments: boolean }): Pro
   }
   const zipped = zipSync(files);
   const stamp = new Date().toISOString().slice(0, 10);
-  return { blob: new Blob([zipped as Uint8Array<ArrayBuffer>], { type: 'application/zip' }), fileName: `exportacion-abierta-vetcasa-${stamp}.zip` };
+  return { blob: new Blob([zipped as Uint8Array<ArrayBuffer>], { type: 'application/zip' }), fileName: `exportacion-abierta-${APP_SLUG}-${stamp}.zip` };
 }

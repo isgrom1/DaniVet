@@ -9,7 +9,7 @@ import { readVaultHeader } from '@/data/session';
 import { formatDateTime } from '@/lib/dates';
 import { isPlausibleRecoveryKey, passphraseStrength } from '@/lib/crypto';
 import { useUiState } from '@/lib/uiState';
-import { parseBackup, restoreBackup, restoreBackupWithRecovery, unlockBackup, type ParsedBackup } from '@/features/backup/backup';
+import { parseBackup, restoreBackup, restoreBackupWithRecovery, unlockBackup, type ParsedBackup, BACKUP_ACCEPT, BACKUP_EXT } from '@/features/backup/backup';
 import { AuthLayout } from './AuthLayout';
 import { PassphraseInput } from './PassphraseInput';
 
@@ -78,7 +78,7 @@ export function RestoreFromBackup({ onCancel, embedded }: { onCancel: () => void
       <input
         ref={fileRef}
         type="file"
-        accept=".vetcasa,application/octet-stream,application/zip"
+        accept={BACKUP_ACCEPT}
         className="hidden"
         onChange={(e) => void pick(e.target.files?.[0])}
         data-testid="backup-file-input"
@@ -129,7 +129,7 @@ export function RestoreFromBackup({ onCancel, embedded }: { onCancel: () => void
   );
   if (embedded) return <div className="space-y-4">{body}</div>;
   return (
-    <AuthLayout title="Restaurar desde un respaldo" subtitle="Usa un archivo .vetcasa creado desde Ajustes › Respaldo. Los datos de este dispositivo se reemplazarán.">
+    <AuthLayout title="Restaurar desde un respaldo" subtitle={`Usa un archivo .${BACKUP_EXT} creado desde Ajustes › Respaldo. Los datos de este dispositivo se reemplazarán.`}>
       {body}
     </AuthLayout>
   );

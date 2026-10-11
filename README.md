@@ -1,4 +1,4 @@
-# VetCasa
+# DApp
 
 Aplicación web instalable (PWA) para una médica veterinaria independiente que atiende a domicilio en Chile. Se usa desde el iPhone (Safari → "Agregar a inicio"), funciona sin conexión y guarda los datos **cifrados en el propio teléfono**. No requiere servidores, bases de datos ni instalación de programas.
 
@@ -32,7 +32,7 @@ Aplicación web instalable (PWA) para una médica veterinaria independiente que 
 - **Finanzas**: servicios y precios, cobros con ítems (honorarios, medicamentos, insumos, traslado), abonos y pagos, gastos con kilometraje, presupuestos convertibles en cobro, reportes por período, exportación CSV, comprobante interno en PDF (**no es boleta ni factura**).
 - **Inventario (opcional)**: productos, lotes con vencimiento, movimientos y descuento desde vacunas.
 - **Búsqueda global**, **historial de cambios cifrado**, **recordatorios dentro de la app**.
-- **Respaldo cifrado (.vetcasa)**, verificación de un respaldo sin restaurarlo, restauración (con contraseña o clave de recuperación), **exportación abierta** (JSON con relaciones, CSV y adjuntos; exige confirmar la contraseña) y PDF de la ficha de un paciente.
+- **Respaldo cifrado (.dapp)**, verificación de un respaldo sin restaurarlo, restauración (con contraseña o clave de recuperación), **exportación abierta** (JSON con relaciones, CSV y adjuntos; exige confirmar la contraseña) y PDF de la ficha de un paciente.
 - **Modo sin conexión** completo, **datos de demostración** marcados "(DEMO)" que se cargan y eliminan desde Ajustes, perfil profesional (logo y firma para documentos) y personalización (nombre de la app, especies, rangos de referencia, medicamentos frecuentes, plantillas, medios de pago).
 
 ## Resultados de las pruebas (ejecutadas realmente)
@@ -64,4 +64,4 @@ npm run build        # compilación de producción (dist/)
 npm run test:e2e     # pruebas de extremo a extremo (usa npm run preview)
 ```
 
-El nombre de la app se cambia con `VITE_APP_NAME=MiNombre npm run build` (y dentro de la app en *Ajustes › Perfil profesional*). Más detalles en la [documentación técnica](docs/tecnico.md).
+El nombre de la app ("DApp") se cambia en una sola línea de `vite.config.ts` (`APP_NAME`) o con `VITE_APP_NAME=MiNombre npm run build`. Ver [Cambiar el nombre](docs/tecnico.md#cambiar-el-nombre-de-la-app). El proyecto se llamó VetCasa al comienzo; algunos identificadores internos conservan ese nombre a propósito.

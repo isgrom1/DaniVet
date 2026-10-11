@@ -6,6 +6,7 @@ import { currentDataVersion, DATA_VERSION_KEY } from './migrations';
 import { defaultSettings, defaultSpecies, defaultTemplates } from './defaults';
 import { emptyTables, useDataStore } from './store';
 import { getDek, hasDek, setDek } from './vaultKey';
+import { DEFAULT_APP_NAME } from '@/lib/platform';
 
 const VAULT_KEY = 'vault';
 const PIN_KEY = 'pinSession';
@@ -61,7 +62,7 @@ export async function createAccount(passphrase: string, init: AccountInit, itera
       title: init.title.trim() || 'Médica Veterinaria',
       email: init.email?.trim() || undefined,
       phone: init.phone?.trim() || undefined,
-      appName: 'VetCasa',
+      appName: DEFAULT_APP_NAME,
       paperSize: 'letter',
     },
     { audit: false },

@@ -103,7 +103,7 @@ export async function createAccount(page: Page, testInfo?: TestInfo): Promise<st
   await page.getByRole('checkbox').check();
   await page.getByRole('button', { name: 'Continuar' }).click();
   await page.getByRole('button', { name: 'Ahora no' }).click();
-  await page.getByRole('button', { name: 'Comenzar a usar VetCasa' }).click();
+  await page.getByRole('button', { name: /^Comenzar a usar / }).click();
   await expect(page.getByRole('navigation', { name: 'Navegación principal' })).toBeVisible();
   return key;
 }

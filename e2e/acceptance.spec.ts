@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { strFromU8, unzipSync } from 'fflate';
+import { slugify } from '../src/lib/text';
 import {
   PASS,
   VET_NAME,
@@ -354,7 +355,8 @@ test('flujo completo de la veterinaria a domicilio', async ({ page, context, bro
     await p.getByRole('button', { name: 'Crear respaldo cifrado' }).click();
     const sheet = dialog(p, 'Respaldo listo');
     backup = await clickAndDownload(p, sheet.getByRole('button', { name: 'Guardar o compartir el archivo' }), testInfo);
-    expect(backup.name).toMatch(/^respaldo-vetcasa-.+\.vetcasa$/);
+    const slug = slugify(await p.title());
+    expect(backup.name).toMatch(new RegExp(`^respaldo-${slug}-.+\\.${slug}$`));
     await sheet.getByRole('button', { name: 'Cerrar' }).click();
     const files = unzipSync(backup.bytes);
     const records = strFromU8(files['records.json']);
@@ -383,7 +385,7 @@ test('flujo completo de la veterinaria a domicilio', async ({ page, context, bro
     await dialog(p, 'Exportación abierta (sin cifrar)').getByRole('button', { name: 'Entiendo, continuar' }).click();
     await dialog(p, 'Confirma tu identidad').getByLabel('Contraseña').fill(PASS);
     const exp = await clickAndDownload(p, dialog(p, 'Confirma tu identidad').getByRole('button', { name: 'Generar exportación' }), testInfo);
-    expect(exp.name).toMatch(/^exportacion-abierta-vetcasa-.+\.zip$/);
+    expect(exp.name).toMatch(new RegExp(`^exportacion-abierta-${slug}-.+\\.zip$`));
     const z = unzipSync(exp.bytes);
     const json = <T,>(n: string) => JSON.parse(strFromU8(z[`datos/${n}.json`])) as T[];
     expect(Object.keys(z)).toContain('LEEME.txt');

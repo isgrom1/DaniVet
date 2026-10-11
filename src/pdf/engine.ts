@@ -1,5 +1,6 @@
 import { PDFDocument, StandardFonts, rgb, degrees, type PDFFont, type PDFImage, type PDFPage } from 'pdf-lib';
 import type { Profile } from '@/data/schema';
+import { DEFAULT_APP_NAME } from '@/lib/platform';
 
 /**
  * Motor de maquetación simple sobre pdf-lib (fuentes estándar, sin dependencias de red).
@@ -70,8 +71,8 @@ export class PdfWriter {
     w.opts = opts;
     w.doc = await PDFDocument.create();
     w.doc.setTitle(sanitize(opts.title));
-    w.doc.setCreator('VetCasa');
-    w.doc.setProducer('VetCasa (pdf-lib)');
+    w.doc.setCreator(sanitize(opts.profile?.appName || DEFAULT_APP_NAME));
+    w.doc.setProducer(`${sanitize(opts.profile?.appName || DEFAULT_APP_NAME)} (pdf-lib)`);
     if (opts.profile?.fullName) w.doc.setAuthor(sanitize(opts.profile.fullName));
     w.doc.setLanguage('es-CL');
     w.font = await w.doc.embedFont(StandardFonts.Helvetica);

@@ -13,6 +13,7 @@ import { isValidEmail } from '@/lib/text';
 import { emptyToUndef } from '@/lib/objects';
 import { deleteAttachment, saveAttachment, useBlobUrl } from '@/features/attachments/attachments';
 import { SignaturePad } from '@/features/documents/SignaturePad';
+import { DEFAULT_APP_NAME } from '@/lib/platform';
 
 export function ProfileSettings() {
   const profile = useProfile();
@@ -29,7 +30,7 @@ export function ProfileSettings() {
     city: profile?.city ?? '',
     serviceArea: profile?.serviceArea ?? '',
     documentFooter: profile?.documentFooter ?? '',
-    appName: profile?.appName ?? 'VetCasa',
+    appName: profile?.appName ?? DEFAULT_APP_NAME,
     paperSize: profile?.paperSize ?? 'letter',
   }));
   const [busy, setBusy] = useState(false);
@@ -193,7 +194,7 @@ export function ProfileSettings() {
                 ]}
               />
             </Field>
-            <Field label="Nombre de la app" error={errors.appName} hint="Se usa dentro de la app y en eventos de calendario. El nombre bajo el ícono de inicio se define al instalarla.">
+            <Field label="Nombre de la app" error={errors.appName} hint="Aparece en el pie de los PDF y en los eventos de calendario. El nombre bajo el ícono de inicio se define al publicar la app.">
               <TextInput value={f.appName} onChange={(e) => set('appName', e.target.value)} />
             </Field>
           </Card>

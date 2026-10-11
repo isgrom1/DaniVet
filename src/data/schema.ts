@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /**
- * Modelo de datos de VetCasa.
+ * Modelo de datos de la app.
  *
  * Convenciones:
  * - `id`: UUID v4 estable. Las referencias entre entidades se guardan como `<entidad>Id`.

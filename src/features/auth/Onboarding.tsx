@@ -15,6 +15,7 @@ import { InstallGuide } from './InstallGuide';
 import { PassphraseInput } from './PassphraseInput';
 import { RecoveryKeyView } from './RecoveryKeyView';
 import { RestoreFromBackup } from './RestoreFromBackup';
+import { DEFAULT_APP_NAME } from '@/lib/platform';
 
 type Step = 'welcome' | 'create' | 'recovery' | 'pin' | 'done' | 'restore';
 
@@ -58,7 +59,7 @@ export function Onboarding() {
           </ol>
         </div>
         <Button block size="lg" onClick={() => useUiState.setState({ onboarding: false })}>
-          Comenzar a usar VetCasa
+          Comenzar a usar {DEFAULT_APP_NAME}
         </Button>
       </AuthLayout>
     );

@@ -1,5 +1,6 @@
 import { Share, SquarePlus, Smartphone } from 'lucide-react';
 import { Notice } from '@/components/Card';
+import { DEFAULT_APP_NAME } from '@/lib/platform';
 
 export function InstallGuide() {
   return (
@@ -25,7 +26,7 @@ export function InstallGuide() {
         <li className="flex gap-3">
           <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-brand-700 text-sm font-bold text-white">3</span>
           <span>
-            Abre <strong>VetCasa</strong> desde el ícono nuevo de tu pantalla de inicio y crea tu cuenta <strong>desde allí</strong>.
+            Abre <strong>{DEFAULT_APP_NAME}</strong> desde el ícono nuevo de tu pantalla de inicio y crea tu cuenta <strong>desde allí</strong>.
           </span>
         </li>
       </ol>

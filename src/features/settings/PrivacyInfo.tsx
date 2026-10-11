@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { PageHeader, Page } from '@/components/layout';
 import { Card, Notice, Section } from '@/components/Card';
+import { BACKUP_EXT } from '@/features/backup/backup';
 
 function Block({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -22,7 +23,7 @@ export function PrivacyInfo() {
         <Block title="Dónde están los datos y quién accede">
           <p>Todos los datos (tutores, pacientes, fichas, archivos) se guardan solo en este dispositivo, cifrados con AES-256-GCM. La clave se deriva de tu contraseña y nunca sale del teléfono.</p>
           <p>La app no usa servidores propios, analítica, publicidad ni servicios en la nube: no envía datos a terceros. Solo tú, con tu contraseña o PIN, puedes leerlos.</p>
-          <p>Los respaldos (.vetcasa) están cifrados. La exportación abierta y los PDF o CSV que generes no lo están: compártelos solo con quien corresponda.</p>
+          <p>Los respaldos (.{BACKUP_EXT}) están cifrados. La exportación abierta y los PDF o CSV que generes no lo están: compártelos solo con quien corresponda.</p>
         </Block>
         <Block title="Protección de datos personales en Chile">
           <p>

@@ -1,6 +1,6 @@
-# Guía de uso de VetCasa
+# Guía de uso de DApp
 
-VetCasa es tu herramienta para la atención a domicilio: agenda, fichas clínicas, recetas, vacunas, cobros y documentos, desde el iPhone y también sin señal. Tus datos se guardan **cifrados en tu teléfono**: nadie más puede verlos (tampoco quien te envió el enlace) y no dependen de ningún servidor.
+DApp es tu herramienta para la atención a domicilio: agenda, fichas clínicas, recetas, vacunas, cobros y documentos, desde el iPhone y también sin señal. Tus datos se guardan **cifrados en tu teléfono**: nadie más puede verlos (tampoco quien te envió el enlace) y no dependen de ningún servidor.
 
 ---
 
@@ -11,7 +11,7 @@ Necesitas un iPhone con iOS 16.4 o superior.
 1. Abre el enlace que te enviaron **en Safari** (si se abre dentro de WhatsApp, toca el ícono de brújula o "Abrir en Safari").
 2. Toca el botón **Compartir** (el cuadrado con una flecha hacia arriba). En iOS 26, si no lo ves, toca primero el botón **···**.
 3. Elige **Agregar a inicio**. Si aparece la opción **Abrir como app web**, déjala activada. Toca **Agregar**.
-4. Cierra Safari y abre **VetCasa desde el ícono nuevo** de tu pantalla de inicio.
+4. Cierra Safari y abre **DApp desde el ícono nuevo** de tu pantalla de inicio.
 
 > **Importante:** en iPhone, Safari y la app instalada guardan sus datos por separado. **Crea tu cuenta y trabaja siempre desde el ícono**, no desde Safari.
 
@@ -23,7 +23,7 @@ Necesitas un iPhone con iOS 16.4 o superior.
 4. Marca la casilla de confirmación y toca **Crear cuenta**.
 5. La app te muestra tu **clave de recuperación** (32 letras y números). **Guárdala fuera del teléfono**: anótala en papel, guárdala en tu gestor de contraseñas o envíatela a un lugar seguro. Es la única forma de recuperar tus datos si olvidas la contraseña o si cambias de teléfono. Se muestra **una sola vez**.
 6. Opcional: activa un **PIN** de 4 a 8 dígitos para desbloquear rápido durante las visitas. El PIN dura 14 días; luego (o tras 5 intentos fallidos) la app vuelve a pedir la contraseña.
-7. Toca **Comenzar a usar VetCasa**.
+7. Toca **Comenzar a usar DApp**.
 
 Después, en **Más › Perfil profesional** completa tu RUT, teléfono, logo y firma para los documentos. En **Más › Servicios y precios** registra tus tarifas.
 
@@ -55,7 +55,7 @@ Tus datos existen solo en tu teléfono. Si lo pierdes, se daña o borras la app,
 2. Toca **Guardar o compartir el archivo** y elige **Guardar en Archivos** (por ejemplo, en iCloud Drive) o envíatelo por correo.
 3. De vez en cuando usa **Verificar un respaldo** para comprobar que el archivo se puede recuperar completo.
 
-El archivo `.vetcasa` está cifrado: sin tu contraseña o tu clave de recuperación nadie puede leerlo. Más detalles en [Respaldo y recuperación](respaldo-y-recuperacion.md).
+El archivo `.dapp` está cifrado: sin tu contraseña o tu clave de recuperación nadie puede leerlo. Más detalles en [Respaldo y recuperación](respaldo-y-recuperacion.md).
 
 ## 5. Seguridad y privacidad
 
@@ -72,6 +72,10 @@ Cuando haya una versión nueva, aparecerá un aviso **"Hay una nueva versión de
 ## 7. Preguntas frecuentes
 
 **¿Necesito internet?** Solo para instalarla y para recibir actualizaciones. Todo lo demás funciona sin conexión.
+
+**¿Puedo tener más de una cuenta?** Cada teléfono (o computador) tiene su propia cuenta, independiente y cifrada: si otra persona instala la app en su teléfono, crea su cuenta y ve solo sus datos. No hay una lista central de cuentas ni nadie puede ver las de otros. En un mismo teléfono la app tiene **una** cuenta; para empezar de cero en ese teléfono se usa **Eliminar todos los datos de este dispositivo** (en *Más › Seguridad* o en la pantalla de desbloqueo), después de crear un respaldo si se quieren conservar.
+
+**¿Podemos compartir pacientes entre dos profesionales?** No en esta versión: cada cuenta es independiente y no hay sincronización. Se puede entregar una copia mediante un respaldo, pero los cambios posteriores no se comparten.
 
 **¿Puedo usarla en otro teléfono o en el computador?** Sí, restaurando un respaldo en el otro equipo (**Restaurar desde un respaldo** en la pantalla de bienvenida). Los equipos **no se sincronizan solos**: si trabajas en dos, los cambios de uno no aparecen en el otro.
 

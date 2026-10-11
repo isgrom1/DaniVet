@@ -7,7 +7,9 @@ import { incomingRefs, idsAtPath, refsOf } from './relations';
 import { schemas, TABLES, type AuditEntry, type EntityOf, type NewEntity, type TableName } from './schema';
 import { applyChanges, emptyTables, getRecord, useDataStore } from './store';
 import { getDek, hasDek, setDek } from './vaultKey';
+import { DEFAULT_APP_NAME } from '@/lib/platform';
 
+// Prefijo interno del cifrado: no debe cambiar con el nombre de la app (los datos existentes dejarían de descifrarse).
 export const aadFor = (t: string, id: string) => `vetcasa:${t}:${id}`;
 
 const looseSchemas = Object.fromEntries(TABLES.map((t) => [t, schemas[t].loose()])) as unknown as {
@@ -72,7 +74,7 @@ export async function loadAll(): Promise<void> {
   if (fromVersion > currentDataVersion()) {
     setDek(null);
     useDataStore.setState({ tables: emptyTables(), status: 'locked', loadIssues: 0 });
-    throw new UserError('Estos datos se guardaron con una versión más nueva de VetCasa. Cierra la app por completo y vuelve a abrirla con conexión a Internet para que se actualice.');
+    throw new UserError(`Estos datos se guardaron con una versión más nueva de ${DEFAULT_APP_NAME}. Cierra la app por completo y vuelve a abrirla con conexión a Internet para que se actualice.`);
   }
   useDataStore.setState({ status: 'loading' });
   const dek = getDek();

@@ -1,4 +1,4 @@
-# Documentación técnica de VetCasa
+# Documentación técnica de DApp
 
 ## 1. Arquitectura en una página
 
@@ -109,11 +109,26 @@ Para publicar en otro hosting estático (Netlify, Cloudflare Pages, un dominio p
 ## 7. Mantención
 
 - **Actualizar dependencias:** `npm outdated`, actualizar, luego `npm run typecheck && npm test && npm run build && npm run test:e2e`. `npm audit` estaba en 0 vulnerabilidades al entregar.
-- **Cambiar el nombre de la app:** variable `VITE_APP_NAME` al compilar (manifiesto, título) y, dentro de la app, *Ajustes › Perfil profesional* (documentos). Para la publicación automática, agregar `VITE_APP_NAME` como variable en el paso "Compilar para la ruta publicada".
+- **Cambiar el nombre de la app:** ver la sección siguiente.
 - **Íconos:** `scripts/icon-source.mjs` y `npm run icons`.
 - **Especies, rangos de referencia, medicamentos frecuentes, pautas de vacunación, plantillas, servicios y medios de pago:** se configuran dentro de la app (*Más › …*), no requieren cambios de código.
 - **Publicar una versión:** push a la rama por defecto. La app instalada detecta la versión nueva y muestra "Actualizar"; la usuaria decide cuándo (se guardan antes los formularios abiertos).
 - **Revisión periódica sugerida:** cambios normativos (Ley 21.719, recetas SAG), compatibilidad con la última versión de iOS y que el flujo de publicación siga en verde.
+
+### Cambiar el nombre de la app
+
+El nombre visible sale de **una sola línea** de `vite.config.ts`:
+
+```ts
+const APP_NAME = process.env.VITE_APP_NAME || 'DApp';
+```
+
+Al cambiarla y publicar (push a la rama principal), cambian: el nombre bajo el ícono de inicio y el título (`index.html`, manifiesto), los textos de la app ("Comenzar a usar…", guía de instalación), el pie y los metadatos de los PDF, los mensajes de respaldo y los nombres de archivo (`respaldo-<nombre>-<fecha>.<nombre>`, `exportacion-abierta-<nombre>-…zip`, `clave-recuperacion-<nombre>.txt`). También se puede compilar sin editar el archivo: `VITE_APP_NAME="Otro Nombre" npm run build`.
+
+- **No cambian, a propósito:** el nombre de la base de datos en el teléfono (`vetcasa`), los prefijos del cifrado (`vetcasa:…`) y el identificador del formato de respaldo (`vetcasa-backup`). Si cambiaran, los datos y respaldos existentes dejarían de abrirse. Los respaldos `.vetcasa` antiguos se siguen aceptando.
+- **En un iPhone donde la app ya estaba instalada,** el nombre bajo el ícono no se actualiza solo (iOS lo fija al instalar). Para verlo: crear un respaldo, eliminar el ícono, volver a "Agregar a inicio" y restaurar el respaldo. **Eliminar el ícono borra los datos de ese teléfono**: nunca sin respaldo.
+- En *Ajustes › Perfil profesional › Nombre de la app* cada profesional puede usar otro nombre en el pie de los PDF y en los eventos de calendario.
+- **La URL no cambia con el nombre:** depende del nombre del repositorio (`https://isgrom1.github.io/DaniVet/`). Renombrar el repositorio cambia la ruta; conviene hacerlo antes de que alguien instale la app (una app instalada desde la ruta anterior dejaría de actualizarse).
 
 ## 8. Desarrollo y pruebas
 

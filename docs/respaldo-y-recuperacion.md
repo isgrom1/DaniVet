@@ -1,8 +1,10 @@
 # Respaldo y recuperación
 
-VetCasa no guarda nada en servidores: **el teléfono es la única copia** de los datos hasta que se crea un respaldo. Este documento explica cómo respaldar, comprobar y restaurar, y qué hacer en cada situación.
+DApp no guarda nada en servidores: **el teléfono es la única copia** de los datos hasta que se crea un respaldo. Este documento explica cómo respaldar, comprobar y restaurar, y qué hacer en cada situación.
 
-## Qué contiene un respaldo `.vetcasa`
+## Qué contiene un respaldo `.dapp`
+
+(Los respaldos de prueba creados cuando la app se llamaba VetCasa tienen extensión `.vetcasa` y se siguen aceptando.)
 
 - Es un archivo ZIP con:
   - `manifest.json`: fecha, versión de la app y del modelo de datos, cantidad de registros y la **cabecera de la bóveda** (la clave de datos envuelta con la contraseña y con la clave de recuperación; nunca la clave en claro).

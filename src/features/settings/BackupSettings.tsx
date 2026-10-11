@@ -16,7 +16,7 @@ import { useMeta } from '@/lib/useMeta';
 import { PassphraseInput } from '@/features/auth/PassphraseInput';
 import { RestoreFromBackup } from '@/features/auth/RestoreFromBackup';
 import { formatBytes } from '@/features/attachments/attachments';
-import { createEncryptedBackup, exportOpenData, parseBackup, verifyBackup, type ParsedBackup, type VerifyResult } from '@/features/backup/backup';
+import { createEncryptedBackup, exportOpenData, parseBackup, verifyBackup, type ParsedBackup, type VerifyResult, BACKUP_ACCEPT, BACKUP_EXT } from '@/features/backup/backup';
 
 async function deliver(blob: Blob, fileName: string) {
   const r = await shareFile(blob, fileName).catch(() => 'unsupported' as const);
@@ -90,7 +90,7 @@ export function BackupSettings() {
         <Section title="Respaldo cifrado (recomendado)">
           <Card className="space-y-3">
             <p className="text-[15px] text-ink-700">
-              Archivo <strong>.vetcasa</strong> cifrado con tu contraseña actual (o tu clave de recuperación). Contiene {counts.patients} pacientes, {counts.tutors} tutores,{' '}
+              Archivo <strong>.{BACKUP_EXT}</strong> cifrado con tu contraseña actual (o tu clave de recuperación). Contiene {counts.patients} pacientes, {counts.tutors} tutores,{' '}
               {counts.consultations} consultas y {counts.attachments} adjuntos.
             </p>
             <Switch checked={withFiles} onChange={setWithFiles} label="Incluir fotos y documentos adjuntos" description="El archivo será más grande." />
@@ -183,9 +183,9 @@ function VerifySheet({ onClose }: { onClose: () => void }) {
   return (
     <Sheet open onClose={onClose} title="Verificar respaldo" size="full">
       <div className="space-y-4">
-        <input ref={input} type="file" accept=".vetcasa,application/octet-stream,application/zip" className="hidden" onChange={(e) => void pick(e.target.files?.[0])} data-testid="verify-file-input" />
+        <input ref={input} type="file" accept={BACKUP_ACCEPT} className="hidden" onChange={(e) => void pick(e.target.files?.[0])} data-testid="verify-file-input" />
         <Button block variant="secondary" onClick={() => input.current?.click()}>
-          {parsed ? 'Elegir otro archivo' : 'Elegir archivo .vetcasa'}
+          {parsed ? 'Elegir otro archivo' : `Elegir archivo .${BACKUP_EXT}`}
         </Button>
         {parsed && (
           <>

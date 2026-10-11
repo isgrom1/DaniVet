@@ -34,6 +34,7 @@ interface VetDB extends DBSchema {
 
 export type VetDatabase = IDBPDatabase<VetDB>;
 
+// Identificador interno (no es el nombre visible de la app): cambiarlo dejaría inaccesibles los datos ya guardados.
 export const DB_NAME = 'vetcasa';
 let dbName = DB_NAME;
 let dbPromise: Promise<VetDatabase> | null = null;
