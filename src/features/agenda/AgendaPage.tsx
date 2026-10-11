@@ -64,14 +64,10 @@ export function AgendaPage() {
             <button type="button" aria-label="Siguiente" className="flex size-10 items-center justify-center rounded-full bg-white ring-1 ring-sand-300" onClick={() => go(addDays(date, view === 'dia' ? 1 : 7))}>
               <ChevronRight className="size-5" />
             </button>
-            <input
-              type="date"
-              aria-label="Ir a fecha"
-              value={date}
-              onChange={(e) => e.target.value && go(e.target.value)}
-              className="input-base !min-h-10 w-11 !px-1 text-transparent"
-              style={{ colorScheme: 'light' }}
-            />
+            <label className="relative flex size-10 items-center justify-center overflow-hidden rounded-full bg-white ring-1 ring-sand-300">
+              <CalendarDays className="size-5" aria-hidden />
+              <input type="date" aria-label="Ir a una fecha" value={date} onChange={(e) => e.target.value && go(e.target.value)} className="absolute inset-0 cursor-pointer opacity-0" />
+            </label>
           </div>
         </div>
 

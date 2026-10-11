@@ -13,7 +13,7 @@ import { parseBackup, restoreBackup, restoreBackupWithRecovery, unlockBackup, ty
 import { AuthLayout } from './AuthLayout';
 import { PassphraseInput } from './PassphraseInput';
 
-export function RestoreFromBackup({ onCancel }: { onCancel: () => void }) {
+export function RestoreFromBackup({ onCancel, embedded }: { onCancel: () => void; embedded?: boolean }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [parsed, setParsed] = useState<ParsedBackup | null>(null);
   const [fileName, setFileName] = useState('');
@@ -73,8 +73,8 @@ export function RestoreFromBackup({ onCancel }: { onCancel: () => void }) {
     }
   };
 
-  return (
-    <AuthLayout title="Restaurar desde un respaldo" subtitle="Usa un archivo .vetcasa creado desde Ajustes › Respaldo. Los datos de este dispositivo se reemplazarán.">
+  const body = (
+    <>
       <input
         ref={fileRef}
         type="file"
@@ -125,6 +125,12 @@ export function RestoreFromBackup({ onCancel }: { onCancel: () => void }) {
           Restaurar
         </Button>
       </div>
+    </>
+  );
+  if (embedded) return <div className="space-y-4">{body}</div>;
+  return (
+    <AuthLayout title="Restaurar desde un respaldo" subtitle="Usa un archivo .vetcasa creado desde Ajustes › Respaldo. Los datos de este dispositivo se reemplazarán.">
+      {body}
     </AuthLayout>
   );
 }

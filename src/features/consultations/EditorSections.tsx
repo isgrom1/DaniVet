@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Calculator, FilePlus2, FlaskConical, Pill, Plus, Syringe, Trash2, Bug, Receipt, ListTodo, FileSignature } from 'lucide-react';
 import { Button } from '@/components/Button';
 import { Badge, Card, List, ListRow, Notice } from '@/components/Card';
-import { DateInput, Field, IntegerInput, ProvenanceTag, Segmented, Select, TextArea, TextInput } from '@/components/form';
+import { DateInput, Field, FieldGroup, IntegerInput, ProvenanceTag, Segmented, Select, TextArea, TextInput } from '@/components/form';
 import { toast } from '@/components/overlay';
 import { useTables } from '@/data/hooks';
 import { EXAM_SYSTEMS, type Diagnosis, type FindingStatus, type Treatment } from '@/data/schema';
@@ -189,7 +189,7 @@ export function AssessmentSection() {
   const setDx = (i: number, p: Partial<Diagnosis>) => change((s) => ({ ...s, diagnoses: s.diagnoses.map((d, j) => (j === i ? { ...d, ...p } : d)) }));
   return (
     <div className="space-y-4">
-      <Field label="Lista de problemas">
+      <FieldGroup label="Lista de problemas">
         <div className="space-y-2">
           {c.assessment.problems.map((p, i) => (
             <div key={p.id} className="flex gap-2">
@@ -203,9 +203,9 @@ export function AssessmentSection() {
             Agregar problema
           </Button>
         </div>
-      </Field>
+      </FieldGroup>
 
-      <Field label="Diagnósticos">
+      <FieldGroup label="Diagnósticos">
         <div className="space-y-2">
           {state.diagnoses.map((d, i) => (
             <Card key={d.id} padded={false} className="space-y-2 p-3">
@@ -242,7 +242,7 @@ export function AssessmentSection() {
             Agregar diagnóstico
           </Button>
         </div>
-      </Field>
+      </FieldGroup>
 
       <CText path="assessment.testsRequested" label="Exámenes complementarios solicitados" />
       <div className="space-y-2">
@@ -302,7 +302,7 @@ export function PlanSection() {
   const meds = state.treatments.filter((t) => t.kind === 'medication' && t.name.trim());
   return (
     <div className="space-y-4">
-      <Field label="Tratamientos indicados">
+      <FieldGroup label="Tratamientos indicados">
         <div className="space-y-2">
           {state.treatments.map((t, i) => (
             <Card key={t.id} padded={false} className="space-y-3 p-3">
@@ -374,7 +374,7 @@ export function PlanSection() {
             Agregar tratamiento
           </Button>
         </div>
-      </Field>
+      </FieldGroup>
       {meds.length > 0 && (
         <NavButton to={`/recetas/nueva?consultationId=${c.id}`} icon={<Pill className="size-4" />}>
           Crear receta con estos medicamentos
@@ -505,13 +505,13 @@ export function ClosingSection() {
   };
   return (
     <div className="space-y-5">
-      <Field label="Fotografías y documentos de la atención">
+      <FieldGroup label="Fotografías y documentos de la atención">
         <div className="space-y-2">
           <AttachmentPicker base={{ ownerKind: 'consultation', consultationId: c.id, patientId: patient.id }} />
           <AttachmentGrid items={attachments} emptyText="Sin adjuntos en esta consulta." />
         </div>
-      </Field>
-      <Field label="Registros de esta atención">
+      </FieldGroup>
+      <FieldGroup label="Registros de esta atención">
         <div className="space-y-2">
           {linked.length > 0 && (
             <List>
@@ -538,8 +538,8 @@ export function ClosingSection() {
             </NavButton>
           </div>
         </div>
-      </Field>
-      <Field label="Tareas de seguimiento">
+      </FieldGroup>
+      <FieldGroup label="Tareas de seguimiento">
         <div className="space-y-2">
           {tasks.length > 0 && (
             <List>
@@ -565,7 +565,7 @@ export function ClosingSection() {
             </Button>
           </Card>
         </div>
-      </Field>
+      </FieldGroup>
     </div>
   );
 }

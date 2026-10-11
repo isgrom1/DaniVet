@@ -6,6 +6,8 @@ import { aadFor, loadAll } from '@/data/repo';
 import { setDek } from '@/data/vaultKey';
 import { APP_VERSION } from '@/lib/platform';
 import { allOf, useDataStore } from '@/data/store';
+import { toCSV } from '@/lib/csv';
+import { readBlob } from '@/features/attachments/attachments';
 
 /**
  * Respaldo cifrado (.vetcasa):
@@ -194,4 +196,131 @@ async function writeRestore(header: C.VaultHeader, parsed: ParsedBackup) {
     for (const b of parsed.blobs) await tx.objectStore('blobs').put(b);
     await done;
   });
+}
+
+// ---------------------------------------------------------------------------
+// Verificación de un respaldo (sin reemplazar los datos actuales)
+// ---------------------------------------------------------------------------
+export interface VerifyResult {
+  records: number;
+  recordsFailed: number;
+  blobs: number;
+  blobsFailed: number;
+  byTable: Record<string, number>;
+  createdAt: string;
+}
+
+/** Descifra todo el contenido del respaldo en memoria para comprobar que se puede recuperar. No escribe nada. */
+export async function verifyBackup(parsed: ParsedBackup, secret: { passphrase?: string; recoveryKey?: string }): Promise<VerifyResult> {
+  const dek = await unlockBackup(parsed, secret);
+  const res: VerifyResult = { records: 0, recordsFailed: 0, blobs: 0, blobsFailed: 0, byTable: {}, createdAt: parsed.manifest.createdAt };
+  for (const r of parsed.rows) {
+    try {
+      await C.openJson(dek, aadFor(r.t, r.id), { iv: r.iv, ct: r.ct });
+      res.records++;
+      res.byTable[r.t] = (res.byTable[r.t] ?? 0) + 1;
+    } catch {
+      res.recordsFailed++;
+    }
+  }
+  for (const b of parsed.blobs) {
+    try {
+      await C.openBytes(dek, `vetcasa:blob:${b.id}`, { iv: b.iv, ct: b.ct });
+      res.blobs++;
+    } catch {
+      res.blobsFailed++;
+    }
+  }
+  return res;
+}
+
+// ---------------------------------------------------------------------------
+// Exportación abierta (sin cifrar) para migrar a otro sistema
+// ---------------------------------------------------------------------------
+const OPEN_README = `EXPORTACIÓN DE DATOS DE VETCASA (SIN CIFRAR)
+============================================
+
+ATENCIÓN: este archivo contiene datos personales y clínicos legibles. Guárdalo en un lugar seguro y
+elimínalo cuando ya no lo necesites.
+
+Estructura
+- datos/<tabla>.json : todos los registros de cada tabla, en formato JSON.
+- csv/*.csv          : resúmenes en CSV (separador ";") para abrir en planillas.
+- adjuntos/          : fotografías y documentos, con el nombre "<id del adjunto>__<nombre original>".
+
+Relaciones (claves foráneas)
+- Cada registro tiene un "id" estable (UUID).
+- patients.tutors[].tutorId -> tutors.id ; patients.speciesId -> species.id
+- consultations.patientId -> patients.id ; consultations.tutorId -> tutors.id ; consultations.appointmentId -> appointments.id
+- diagnoses.consultationId / treatments.consultationId -> consultations.id
+- prescriptions, vaccinations, dewormings, exams, documents, weights: patientId -> patients.id (y consultationId cuando corresponde)
+- attachments.blobId -> archivo en adjuntos/ ; attachments.patientId / consultationId / examId / documentId
+- charges.tutorId -> tutors.id ; payments.chargeId -> charges.id
+- inventoryLots.itemId / inventoryMovements.itemId -> inventoryItems.id
+- auditLog: historial de cambios (entity = tabla, entityId = id del registro)
+
+Convenciones
+- Fechas sin hora: AAAA-MM-DD. Instantes: ISO 8601 en UTC.
+- Unidades en el nombre del campo: weightKg (kg), temperatureC (°C), heartRateBpm (lpm), respRateRpm (rpm), crtSec (s), *CLP (pesos).
+`;
+
+export async function exportOpenData(opts: { includeAttachments: boolean }): Promise<{ blob: Blob; fileName: string }> {
+  const t = useDataStore.getState().tables;
+  const files: Zippable = { 'LEEME.txt': strToU8(OPEN_README) };
+  for (const [name, map] of Object.entries(t)) {
+    if (name === 'drafts') continue;
+    files[`datos/${name}.json`] = strToU8(JSON.stringify([...(map as Map<string, unknown>).values()], null, 1));
+  }
+  const pname = (id?: string) => (id ? (t.patients.get(id)?.name ?? '') : '');
+  files['csv/tutores.csv'] = strToU8(
+    toCSV(
+      ['id', 'Nombre', 'RUT', 'Teléfono', 'Correo', 'Dirección principal', 'Comuna'],
+      [...t.tutors.values()].map((x) => {
+        const a = x.addresses.find((y) => y.primary) ?? x.addresses[0];
+        return [x.id, x.fullName, x.rut, x.phone, x.email, a?.street, a?.comuna];
+      }),
+    ),
+  );
+  files['csv/pacientes.csv'] = strToU8(
+    toCSV(
+      ['id', 'Nombre', 'Especie', 'Raza', 'Sexo', 'Nacimiento', 'Microchip', 'Estado', 'Tutor principal (id)'],
+      [...t.patients.values()].map((p) => [p.id, p.name, t.species.get(p.speciesId)?.name, p.breed, p.sex, p.birthDate, p.microchip, p.status, p.tutors.find((x) => x.role === 'primary')?.tutorId]),
+    ),
+  );
+  files['csv/consultas.csv'] = strToU8(
+    toCSV(
+      ['id', 'Fecha', 'Paciente', 'Estado', 'Motivo', 'Diagnósticos', 'Tratamientos'],
+      [...t.consultations.values()].map((c) => [
+        c.id,
+        c.startedAt,
+        pname(c.patientId),
+        c.status,
+        c.reason.main,
+        [...t.diagnoses.values()].filter((d) => d.consultationId === c.id).map((d) => `${d.name} (${d.kind})`).join(' | '),
+        [...t.treatments.values()].filter((x) => x.consultationId === c.id).map((x) => [x.name, x.dose, x.frequency].filter(Boolean).join(' ')).join(' | '),
+      ]),
+    ),
+  );
+  files['csv/vacunas.csv'] = strToU8(
+    toCSV(['id', 'Fecha', 'Paciente', 'Vacuna', 'Lote', 'Vencimiento producto', 'Próxima dosis', 'Estado'], [...t.vaccinations.values()].map((v) => [v.id, v.date, pname(v.patientId), v.vaccineName, v.lotNumber, v.productExpiry, v.nextDueDate, v.status])),
+  );
+  files['csv/desparasitaciones.csv'] = strToU8(
+    toCSV(['id', 'Fecha', 'Paciente', 'Tipo', 'Producto', 'Peso (kg)', 'Próximo control', 'Estado'], [...t.dewormings.values()].map((d) => [d.id, d.date, pname(d.patientId), d.kind, d.product, d.weightKgUsed, d.nextDueDate, d.status])),
+  );
+  files['csv/recetas.csv'] = strToU8(
+    toCSV(['id', 'Fecha', 'Paciente', 'Estado', 'Medicamentos'], [...t.prescriptions.values()].map((r) => [r.id, r.date, r.patientSnap.name, r.status, r.items.map((i) => `${i.medicationName}: ${i.dose}`).join(' | ')])),
+  );
+  if (opts.includeAttachments) {
+    for (const a of t.attachments.values()) {
+      try {
+        const b = await readBlob(a.blobId, a.mimeType);
+        files[`adjuntos/${a.id}__${a.fileName.replace(/[\\/:*?"<>|]/g, '_')}`] = [new Uint8Array(await b.arrayBuffer()), { level: 0 }];
+      } catch {
+        /* adjunto no disponible en este dispositivo */
+      }
+    }
+  }
+  const zipped = zipSync(files);
+  const stamp = new Date().toISOString().slice(0, 10);
+  return { blob: new Blob([zipped as Uint8Array<ArrayBuffer>], { type: 'application/zip' }), fileName: `exportacion-abierta-vetcasa-${stamp}.zip` };
 }

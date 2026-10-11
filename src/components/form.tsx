@@ -1,5 +1,7 @@
 import {
+  createContext,
   forwardRef,
+  useContext,
   useEffect,
   useId,
   useLayoutEffect,
@@ -12,6 +14,13 @@ import {
 import { Calculator, CircleAlert, ClipboardCheck, Copy, FileText, MessageCircle, Search, Sparkles, UserRound, X } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import type { Provenance } from '@/data/schema';
+
+/** Id del campo actual: asocia la etiqueta con el control (VoiceOver, pruebas). */
+const FieldIdContext = createContext<string | undefined>(undefined);
+const useFieldId = (id?: string) => {
+  const ctx = useContext(FieldIdContext);
+  return id ?? ctx;
+};
 
 export function Field({
   label,
@@ -34,11 +43,14 @@ export function Field({
   tag?: ReactNode;
   labelAction?: ReactNode;
 }) {
+  const autoId = useId();
+  const id = htmlFor ?? autoId;
   return (
+    <FieldIdContext.Provider value={id}>
     <div className={cn('space-y-1.5', className)}>
       {(label || tag || labelAction) && (
         <div className="flex items-center justify-between gap-2">
-          <label htmlFor={htmlFor} className="flex flex-wrap items-center gap-1.5 text-sm font-semibold text-ink-700">
+          <label htmlFor={id} className="flex flex-wrap items-center gap-1.5 text-sm font-semibold text-ink-700">
             {label}
             {required && (
               <span className="text-red-700" aria-label="obligatorio">
@@ -59,26 +71,40 @@ export function Field({
         <p className="text-sm text-ink-500">{hint}</p>
       ) : null}
     </div>
+    </FieldIdContext.Provider>
+  );
+}
+
+/** Grupo de varios controles con un título (no asocia un id único). */
+export function FieldGroup({ label, children, className, hint }: { label: ReactNode; children: ReactNode; className?: string; hint?: ReactNode }) {
+  return (
+    <div className={cn('space-y-1.5', className)} role="group" aria-label={typeof label === 'string' ? label : undefined}>
+      <p className="text-sm font-semibold text-ink-700">{label}</p>
+      {children}
+      {hint && <p className="text-sm text-ink-500">{hint}</p>}
+    </div>
   );
 }
 
 type InputProps = InputHTMLAttributes<HTMLInputElement> & { invalid?: boolean; suffix?: ReactNode };
 
-export const TextInput = forwardRef<HTMLInputElement, InputProps>(function TextInput({ className, invalid, suffix, ...rest }, ref) {
+export const TextInput = forwardRef<HTMLInputElement, InputProps>(function TextInput({ className, invalid, suffix, id: idProp, ...rest }, ref) {
+  const id = useFieldId(idProp);
   if (suffix) {
     return (
       <div className="relative">
-        <input ref={ref} aria-invalid={invalid || undefined} className={cn('input-base pr-16', className)} {...rest} />
+        <input ref={ref} id={id} aria-invalid={invalid || undefined} className={cn('input-base pr-16', className)} {...rest} />
         <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm font-medium text-ink-500">{suffix}</span>
       </div>
     );
   }
-  return <input ref={ref} aria-invalid={invalid || undefined} className={cn('input-base', className)} {...rest} />;
+  return <input ref={ref} id={id} aria-invalid={invalid || undefined} className={cn('input-base', className)} {...rest} />;
 });
 
 /** Área de texto que crece con su contenido. */
-export function TextArea({ className, invalid, minRows = 3, ...rest }: TextareaHTMLAttributes<HTMLTextAreaElement> & { invalid?: boolean; minRows?: number }) {
+export function TextArea({ className, invalid, minRows = 3, id: idProp, ...rest }: TextareaHTMLAttributes<HTMLTextAreaElement> & { invalid?: boolean; minRows?: number }) {
   const ref = useRef<HTMLTextAreaElement>(null);
+  const id = useFieldId(idProp);
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -88,6 +114,7 @@ export function TextArea({ className, invalid, minRows = 3, ...rest }: TextareaH
   return (
     <textarea
       ref={ref}
+      id={id}
       rows={minRows}
       aria-invalid={invalid || undefined}
       className={cn('input-base resize-none leading-6', className)}
@@ -96,9 +123,11 @@ export function TextArea({ className, invalid, minRows = 3, ...rest }: TextareaH
   );
 }
 
-export function Select({ className, invalid, children, ...rest }: SelectHTMLAttributes<HTMLSelectElement> & { invalid?: boolean }) {
+export function Select({ className, invalid, children, id: idProp, ...rest }: SelectHTMLAttributes<HTMLSelectElement> & { invalid?: boolean }) {
+  const id = useFieldId(idProp);
   return (
     <select
+      id={id}
       aria-invalid={invalid || undefined}
       className={cn('input-base select-chevron', className)}
       {...rest}
@@ -140,12 +169,14 @@ export function IntegerInput({ value, onChange, unit, ...rest }: Omit<InputProps
 }
 
 /** Monto en pesos: muestra separador de miles mientras se escribe. */
-export function MoneyInput({ value, onChange, ...rest }: Omit<InputProps, 'value' | 'onChange'> & { value: string; onChange: (v: string) => void }) {
+export function MoneyInput({ value, onChange, id: idProp, ...rest }: Omit<InputProps, 'value' | 'onChange'> & { value: string; onChange: (v: string) => void }) {
+  const id = useFieldId(idProp);
   const display = value ? Number(value.replace(/\D/g, '') || 0).toLocaleString('es-CL') : '';
   return (
     <div className="relative">
       <span className="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-ink-500">$</span>
       <input
+        id={id}
         inputMode="numeric"
         autoComplete="off"
         className="input-base pl-7 tabular"
@@ -157,10 +188,12 @@ export function MoneyInput({ value, onChange, ...rest }: Omit<InputProps, 'value
   );
 }
 
-export function DateInput({ value, onChange, invalid, clearable = true, ...rest }: Omit<InputProps, 'value' | 'onChange' | 'type'> & { value: string; onChange: (v: string) => void; clearable?: boolean }) {
+export function DateInput({ value, onChange, invalid, clearable = true, id: idProp, ...rest }: Omit<InputProps, 'value' | 'onChange' | 'type'> & { value: string; onChange: (v: string) => void; clearable?: boolean }) {
+  const id = useFieldId(idProp);
   return (
     <div className="relative">
       <input
+        id={id}
         type="date"
         aria-invalid={invalid || undefined}
         className={cn('input-base', clearable && value && 'pr-12')}
@@ -182,8 +215,9 @@ export function DateInput({ value, onChange, invalid, clearable = true, ...rest 
   );
 }
 
-export function TimeInput({ value, onChange, ...rest }: Omit<InputProps, 'value' | 'onChange' | 'type'> & { value: string; onChange: (v: string) => void }) {
-  return <input type="time" className="input-base" value={value} onChange={(e) => onChange(e.target.value)} {...rest} />;
+export function TimeInput({ value, onChange, id: idProp, ...rest }: Omit<InputProps, 'value' | 'onChange' | 'type'> & { value: string; onChange: (v: string) => void }) {
+  const id = useFieldId(idProp);
+  return <input id={id} type="time" className="input-base" value={value} onChange={(e) => onChange(e.target.value)} {...rest} />;
 }
 
 export function Switch({ checked, onChange, label, description, disabled }: { checked: boolean; onChange: (v: boolean) => void; label: ReactNode; description?: ReactNode; disabled?: boolean }) {

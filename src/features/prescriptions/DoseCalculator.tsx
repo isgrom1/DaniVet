@@ -124,7 +124,7 @@ export function DoseCalculator({
             ))}
             <option value="manual">Ingresar otro peso</option>
           </Select>
-          {weightChoice === 'manual' && <DecimalInput value={manualWeight} onChange={setManualWeight} unit="kg" placeholder="Peso en kg" className="mt-2" />}
+          {weightChoice === 'manual' && <DecimalInput id="dose-manual-weight" aria-label="Peso manual en kg" value={manualWeight} onChange={setManualWeight} unit="kg" placeholder="Peso en kg" className="mt-2" />}
         </Field>
 
         <div className="grid grid-cols-[1fr_auto] gap-2">

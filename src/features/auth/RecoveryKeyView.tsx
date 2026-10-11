@@ -41,7 +41,7 @@ export function RecoveryKeyView({ recoveryKey, onDone, doneLabel = 'Continuar' }
           Copiar
         </Button>
         <Button variant="secondary" icon={<Download className="size-4" />} onClick={save}>
-          Guardar archivo
+          Guardar
         </Button>
       </div>
       <Checkbox checked={saved} onChange={setSaved} label="Guardé la clave de recuperación en un lugar seguro, fuera de este teléfono." />
