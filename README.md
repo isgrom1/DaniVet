@@ -2,10 +2,10 @@
 
 Aplicación web instalable (PWA) para una médica veterinaria independiente que atiende a domicilio en Chile. Se usa desde el iPhone (Safari → "Agregar a inicio"), funciona sin conexión y guarda los datos **cifrados en el propio teléfono**. No requiere servidores, bases de datos ni instalación de programas.
 
-> **Estado de la publicación:** el código, las pruebas y el flujo de publicación automática están listos. La URL pública será
-> **https://isgrom1.github.io/DaniVet/**, pero **todavía no está activa**: falta que la persona dueña del repositorio active GitHub Pages
-> (ver [Acciones pendientes](#acciones-pendientes-que-solo-puede-hacer-la-persona-dueña-del-repositorio)). No compartas el enlace hasta que el flujo
-> "Pruebas y publicación" termine en verde con el paso **Verificar la URL publicada desde Internet**.
+> **Publicada y verificada: https://isgrom1.github.io/DaniVet/**
+> El 11-10-2026 el flujo "Pruebas y publicación" ([ejecución n.º 3](https://github.com/isgrom1/DaniVet/actions/runs/38177804095)) la publicó en GitHub Pages y luego, desde los servidores de GitHub,
+> comprobó que responde por HTTPS y ejecutó el flujo de aceptación completo contra esa URL en tres tamaños de iPhone (6 de 6 aprobadas).
+> Cada cambio de código en la rama principal se vuelve a probar, publicar y verificar automáticamente.
 
 ## Documentación
 
@@ -40,16 +40,16 @@ Aplicación web instalable (PWA) para una médica veterinaria independiente que 
 - **Unitarias (Vitest):** 42 de 42 aprobadas en 7 archivos: cifrado y bóveda, integridad referencial, conflictos, consultas y enmiendas, calculadora de dosis, finanzas, recordatorios, duplicados, agenda, respaldo/restauración/manipulación, PDF con extracción de texto y migraciones de datos.
 - **Extremo a extremo (Playwright, Chromium emulando iPhone SE, iPhone 15 y iPhone 15 Pro Max):** 6 de 6 aprobadas, en `/` y también bajo la ruta `/DaniVet/` que usará GitHub Pages. El flujo de aceptación tiene 20 pasos: cuenta → tutor → dos animales → visita → consulta → tratamiento → vacuna → receta PDF → cobro y pago → cerrar y reabrir → persistencia → enmienda → respaldo y exportación → reglas de acceso → restauración en otro teléfono → sin conexión.
 - **En GitHub Actions** (servidores de GitHub): tipos, unitarias, compilación y las 6 pruebas E2E aprobadas ([ejecución n.º 1](https://github.com/isgrom1/DaniVet/actions/runs/38176565733)). Cada cambio vuelve a ejecutarlas.
+- **Contra la URL publicada** (https://isgrom1.github.io/DaniVet/, desde Internet): 6 de 6 aprobadas en 1,9 min ([ejecución n.º 3](https://github.com/isgrom1/DaniVet/actions/runs/38177804095)).
 - **No probado en un iPhone real** (no hay Safari/WebKit en este entorno). Detalle en [docs/pruebas.md](docs/pruebas.md).
 
-## Acciones pendientes que solo puede hacer la persona dueña del repositorio
+## Próximos pasos
 
-1. **Permitir GitHub Pages en este repositorio.** Con el plan gratuito de GitHub, Pages solo funciona en repositorios **públicos**:
-   *Settings → General → Danger Zone → Change repository visibility → Make public*.
-   Se publica el **código** (no contiene datos de pacientes, claves ni contraseñas). Si prefieres mantener el código privado, se necesita un plan pago de GitHub: no lo contraté.
-2. **Activar Pages con GitHub Actions:** *Settings → Pages → Build and deployment → Source: **GitHub Actions***.
-3. Volver a ejecutar el flujo **Pruebas y publicación** (pestaña *Actions → Pruebas y publicación → Run workflow*), o avisarme para hacerlo. Cuando termine en verde, la URL quedará verificada desde Internet.
-4. Enviar el enlace a la veterinaria con el [mensaje para WhatsApp](docs/mensaje-whatsapp.md) y pedirle que pruebe en su iPhone.
+Ya están hechos: repositorio público, GitHub Pages con *Source: GitHub Actions*, publicación y verificación de la URL.
+
+1. Enviar el enlace a la veterinaria con el [mensaje para WhatsApp](docs/mensaje-whatsapp.md).
+2. Pedirle que confirme en su iPhone: instalación con "Agregar a inicio", creación de la cuenta, compartir un PDF por WhatsApp y guardar un respaldo en iCloud Drive (es la única parte que no se pudo probar en un iPhone real).
+3. No hace falta tocar los flujos sugeridos que muestra *Settings → Pages* ("Configure" de Jekyll o Static HTML): la publicación ya la hace `.github/workflows/publicar.yml`.
 
 ## Desarrollo
 

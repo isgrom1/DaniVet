@@ -102,7 +102,7 @@ El flujo `.github/workflows/publicar.yml` se ejecuta en cada push:
 3. **Publicar** (solo rama por defecto): compila con la ruta base que entrega `actions/configure-pages` (`/DaniVet/`) y despliega con `actions/deploy-pages`.
 4. **Verificar:** espera a que la URL responda por HTTPS, comprueba la página, el manifiesto, el service worker y el ícono, y ejecuta **el flujo de aceptación completo contra la URL publicada**.
 
-Requisitos (los hace la persona dueña del repositorio, una vez): repositorio público (o plan pago) y *Settings → Pages → Source: GitHub Actions*.
+Requisitos (una sola vez, ya hechos el 11-10-2026): repositorio público (o plan pago) y *Settings → Pages → Source: GitHub Actions*. Los cambios que solo tocan documentación (`docs/`, archivos `.md`) no vuelven a publicar la app, para no mostrar avisos de actualización innecesarios.
 
 Para publicar en otro hosting estático (Netlify, Cloudflare Pages, un dominio propio): `BASE_PATH=/ npm run build` y subir la carpeta `dist/`. Se necesita HTTPS (requisito del service worker y de WebCrypto).
 

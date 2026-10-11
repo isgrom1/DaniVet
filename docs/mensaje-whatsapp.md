@@ -1,6 +1,6 @@
 # Mensaje para enviar por WhatsApp
 
-Envíalo **solo después** de que el flujo "Pruebas y publicación" haya terminado en verde (la URL quedó verificada desde Internet).
+La URL está publicada y fue verificada desde Internet el 11-10-2026. Puedes enviarlo tal cual.
 
 ---
 

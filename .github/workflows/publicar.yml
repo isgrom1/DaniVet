@@ -5,7 +5,10 @@ name: Pruebas y publicación
 on:
   push:
     branches: ['**']
+    # Los cambios solo de documentación no se vuelven a publicar (cada publicación muestra "Actualizar" en la app).
+    paths-ignore: ['docs/**', '**/*.md']
   pull_request:
+    paths-ignore: ['docs/**', '**/*.md']
   workflow_dispatch:
 
 permissions:

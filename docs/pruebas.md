@@ -13,7 +13,7 @@ Ejecutadas el 11 de octubre de 2026 sobre el código de esta rama. Todas las cif
 | Extremo a extremo (Playwright) en `/` | **6 / 6 aprobadas** (2 min 5 s) |
 | Extremo a extremo bajo `/DaniVet/` (ruta de GitHub Pages) | **6 / 6 aprobadas** (2 min 8 s) |
 | Las mismas pruebas en GitHub Actions (servidores de GitHub, Ubuntu) | **Aprobadas**: tipos, 42 unitarias, compilación y 6 / 6 E2E (2,3 min) en la [ejecución n.º 1](https://github.com/isgrom1/DaniVet/actions/runs/38176565733) |
-| Contra la URL publicada | **Pendiente**: se ejecuta automáticamente en GitHub Actions cuando Pages esté activado |
+| Contra la URL publicada (https://isgrom1.github.io/DaniVet/, desde Internet) | **6 / 6 aprobadas** (1,9 min) en la [ejecución n.º 3](https://github.com/isgrom1/DaniVet/actions/runs/38177804095); además `HTTP/2 200` por HTTPS (con HSTS) y manifiesto, service worker e ícono para iPhone con respuesta 200 |
 | En un iPhone real | **No realizada** (ver "Lo que no se pudo probar") |
 
 ## Extremo a extremo: el flujo de aceptación
@@ -61,7 +61,7 @@ Durante todo el flujo se registran los errores de JavaScript de la página: **ni
 
 - **iPhone real / Safari (WebKit):** el entorno solo tenía Chromium. Puntos a confirmar en el teléfono: instalación con "Agregar a inicio", creación de la cuenta, PIN, compartir un PDF por WhatsApp e imprimir, guardar el respaldo en Archivos/iCloud Drive y restaurarlo, cámara para fotos, firma con el dedo y desempeño con muchos registros.
 - **Hoja de compartir de iOS:** Chromium en Linux no tiene `navigator.share`; las pruebas usan la descarga, que es la alternativa que la app ofrece cuando no se puede compartir.
-- **URL publicada:** este entorno no tiene acceso a `*.github.io`. La verificación desde Internet la hace el trabajo **Verificar la URL publicada desde Internet** del flujo de GitHub Actions, que ejecuta este mismo flujo de aceptación contra la URL real.
+- **URL publicada desde este entorno:** no tiene acceso a `*.github.io`; por eso la verificación desde Internet la hace el trabajo **Verificar la URL publicada desde Internet** de GitHub Actions, que ejecutó este mismo flujo de aceptación contra la URL real (ver la tabla).
 
 ## Cómo repetirlas
 
