@@ -1,4 +1,13 @@
 /** Errores de la capa de datos, con mensajes comprensibles para la usuaria (sin datos clínicos). */
+
+/** Error con un mensaje pensado para la usuaria (en español, sin datos técnicos). */
+export class UserError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'UserError';
+  }
+}
+
 export class VaultLockedError extends Error {
   constructor() {
     super('La aplicación está bloqueada. Desbloquéala para continuar.');
@@ -60,7 +69,10 @@ export function friendlyError(e: unknown): string {
       e instanceof LockedRecordError ||
       e instanceof StorageError ||
       e instanceof VaultLockedError ||
-      e.name === 'WrongSecretError'
+      e instanceof UserError ||
+      e.name === 'WrongSecretError' ||
+      e.name === 'PinLockedOutError' ||
+      e.name === 'BackupFormatError'
     ) {
       return e.message;
     }

@@ -453,6 +453,25 @@ export const diagnosisSchema = z.object({
 });
 export type Diagnosis = z.infer<typeof diagnosisSchema>;
 
+/** Cálculo de dosis revisado por la profesional antes de incorporarlo a una indicación. */
+export const doseCalcRecord = z.object({
+  weightKg: z.number().positive().optional(),
+  weightSource: z.string().max(200).optional(),
+  doseValue: z.number().positive(),
+  doseUnit: z.string().max(20),
+  concentrationValue: z.number().positive().optional(),
+  concentrationUnit: z.string().max(30).optional(),
+  amountPerAdmin: z.number().positive(),
+  amountUnit: z.string().max(20),
+  everyHours: z.number().positive().optional(),
+  durationDays: z.number().positive().optional(),
+  administrations: z.number().int().positive().optional(),
+  totalAmount: z.number().positive().optional(),
+  steps: z.array(z.string().max(500)),
+  reviewedAt: isoDateTime,
+});
+export type DoseCalcRecord = z.infer<typeof doseCalcRecord>;
+
 export const treatmentSchema = z.object({
   ...base,
   consultationId: ref,
@@ -469,6 +488,8 @@ export const treatmentSchema = z.object({
   instructions: text,
   status: z.enum(['active', 'completed', 'suspended']),
   prescriptionId: optRef,
+  /** Cálculo de dosis revisado, si la dosis se obtuvo con la calculadora. */
+  doseCalc: doseCalcRecord.optional(),
 });
 export type Treatment = z.infer<typeof treatmentSchema>;
 
@@ -485,23 +506,7 @@ export type ConsultationVersion = z.infer<typeof consultationVersionSchema>;
 // ---------------------------------------------------------------------------
 // Recetas
 // ---------------------------------------------------------------------------
-export const doseCalcRecord = z.object({
-  weightKg: z.number().positive(),
-  weightSource: z.string().max(200),
-  dosePerKg: z.number().positive(),
-  doseUnit: z.string().max(20),
-  concentrationValue: z.number().positive().optional(),
-  concentrationUnit: z.string().max(30).optional(),
-  amountPerAdmin: z.number().positive(),
-  amountUnit: z.string().max(20),
-  everyHours: z.number().positive().optional(),
-  durationDays: z.number().positive().optional(),
-  administrations: z.number().int().positive().optional(),
-  totalAmount: z.number().positive().optional(),
-  steps: z.array(z.string().max(500)),
-  reviewedAt: isoDateTime,
-});
-export type DoseCalcRecord = z.infer<typeof doseCalcRecord>;
+
 
 export const prescriptionItemSchema = z.object({
   id: ref,

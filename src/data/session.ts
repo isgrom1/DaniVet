@@ -1,3 +1,4 @@
+import { UserError } from './errors';
 import * as C from '@/lib/crypto';
 import { deleteMeta, getMeta, requestPersistence, setMeta, wipeAll } from '@/lib/idb';
 import { batch, loadAll } from './repo';
@@ -44,7 +45,7 @@ export interface AccountInit {
 
 /** Crea la cuenta local cifrada en este dispositivo y devuelve la clave de recuperación (se muestra una sola vez). */
 export async function createAccount(passphrase: string, init: AccountInit, iterations?: number): Promise<string> {
-  if (await readVaultHeader()) throw new Error('Ya existe una cuenta en este dispositivo.');
+  if (await readVaultHeader()) throw new UserError('Ya existe una cuenta en este dispositivo.');
   const vault = await C.createVault(passphrase, iterations);
   await setMeta(VAULT_KEY, vault.header);
   setDek(vault.dek);
@@ -74,7 +75,7 @@ export async function createAccount(passphrase: string, init: AccountInit, itera
 
 export async function unlockWithPassphrase(passphrase: string): Promise<void> {
   const header = await readVaultHeader();
-  if (!header) throw new Error('No hay una cuenta en este dispositivo.');
+  if (!header) throw new UserError('No hay una cuenta en este dispositivo.');
   const dek = await C.unlockWithPassphrase(header, passphrase);
   setDek(dek);
   await loadAll();
@@ -84,7 +85,7 @@ export async function unlockWithPassphrase(passphrase: string): Promise<void> {
 /** Recupera el acceso con la clave de recuperación y define una nueva contraseña. */
 export async function recoverWithKey(recoveryKey: string, newPassphrase: string): Promise<void> {
   const header = await readVaultHeader();
-  if (!header) throw new Error('No hay una cuenta en este dispositivo.');
+  if (!header) throw new UserError('No hay una cuenta en este dispositivo.');
   const dek = await C.unlockWithRecoveryKey(header, recoveryKey);
   const newHeader = await C.rewrapPassphrase(header, { recoveryKey }, newPassphrase);
   await setMeta(VAULT_KEY, newHeader);
@@ -95,14 +96,14 @@ export async function recoverWithKey(recoveryKey: string, newPassphrase: string)
 
 export async function changePassphrase(current: string, next: string): Promise<void> {
   const header = await readVaultHeader();
-  if (!header) throw new Error('No hay una cuenta en este dispositivo.');
+  if (!header) throw new UserError('No hay una cuenta en este dispositivo.');
   const newHeader = await C.rewrapPassphrase(header, { passphrase: current }, next);
   await setMeta(VAULT_KEY, newHeader);
 }
 
 export async function regenerateRecovery(passphrase: string): Promise<string> {
   const header = await readVaultHeader();
-  if (!header) throw new Error('No hay una cuenta en este dispositivo.');
+  if (!header) throw new UserError('No hay una cuenta en este dispositivo.');
   const res = await C.regenerateRecoveryKey(header, passphrase);
   await setMeta(VAULT_KEY, res.header);
   return res.recoveryKey;
@@ -130,7 +131,7 @@ export async function hasPinSession(): Promise<boolean> {
 }
 
 export async function enablePin(pin: string): Promise<void> {
-  if (!/^\d{4,8}$/.test(pin)) throw new Error('El PIN debe tener entre 4 y 8 dígitos.');
+  if (!/^\d{4,8}$/.test(pin)) throw new UserError('El PIN debe tener entre 4 y 8 dígitos.');
   const verifier = await C.makePinVerifier(pin);
   const now = new Date();
   const expires = new Date(now.getTime() + PIN_SESSION_DAYS * 86_400_000);
