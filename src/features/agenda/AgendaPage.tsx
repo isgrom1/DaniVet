@@ -12,6 +12,7 @@ import { addDays, dayMonth, formatDate, formatTime, isISODate, localDateOf, star
 import { addressText } from '@/lib/maps';
 import { cn } from '@/lib/cn';
 import { appointmentsBetween, appointmentsOnDay, apptEnd, dayRouteHref } from './selectors';
+import { capitalizeFirst } from '@/lib/text';
 
 export function AgendaPage() {
   const tables = useTables();
@@ -35,7 +36,7 @@ export function AgendaPage() {
       <PageHeader
         title="Agenda"
         large
-        subtitle={view === 'dia' ? formatDate(date, 'long') : `Semana del ${formatDate(weekStart)} al ${formatDate(addDays(weekStart, 6))}`}
+        subtitle={view === 'dia' ? capitalizeFirst(formatDate(date, 'long')) : `Semana del ${formatDate(weekStart)} al ${formatDate(addDays(weekStart, 6))}`}
         actions={
           <LinkButton to={`/agenda/nueva?fecha=${date}`} size="sm" icon={<Plus className="size-4" />}>
             Agendar
@@ -83,7 +84,7 @@ export function AgendaPage() {
                 onClick={() => go(d, 'dia')}
                 className={cn('flex min-h-14 flex-col items-center justify-center rounded-xl text-xs', sel ? 'bg-brand-700 text-white' : 'bg-white text-ink-700 ring-1 ring-sand-200', d === todayISO() && !sel && 'ring-2 ring-brand-400')}
               >
-                <span className="font-medium capitalize">{weekdayShort(d).replace('.', '')}</span>
+                <span className="font-medium">{capitalizeFirst(weekdayShort(d).replace('.', ''))}</span>
                 <span className="text-base font-bold">{Number(d.slice(8))}</span>
                 <span className={cn('h-1.5 w-1.5 rounded-full', count ? (sel ? 'bg-white' : 'bg-accent-500') : 'bg-transparent')} aria-label={count ? `${count} visitas` : undefined} />
               </button>
@@ -123,8 +124,8 @@ export function AgendaPage() {
               return (
                 <section key={d} aria-label={formatDate(d, 'long')}>
                   <button type="button" onClick={() => go(d, 'dia')} className="mb-1.5 flex w-full items-center justify-between px-1 text-left">
-                    <span className={cn('text-sm font-semibold capitalize', d === todayISO() ? 'text-brand-700' : 'text-ink-600')}>
-                      {weekdayShort(d)} {dayMonth(d)}
+                    <span className={cn('text-sm font-semibold', d === todayISO() ? 'text-brand-700' : 'text-ink-600')}>
+                      {capitalizeFirst(weekdayShort(d))} {dayMonth(d)}
                     </span>
                     <span className="text-xs text-ink-500">{list.filter((a) => a.status !== 'cancelled').length || 'Sin'} visitas</span>
                   </button>

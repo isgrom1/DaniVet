@@ -4,6 +4,7 @@ import * as C from '@/lib/crypto';
 import { getAllRecords, getBlob, getMeta, setMeta, wipeAll, withDb, type StoredBlob, type StoredRecord } from '@/lib/idb';
 import { aadFor, loadAll } from '@/data/repo';
 import { setDek } from '@/data/vaultKey';
+import { currentDataVersion, DATA_VERSION_KEY } from '@/data/migrations';
 import { APP_VERSION } from '@/lib/platform';
 import { allOf, useDataStore } from '@/data/store';
 import { toCSV } from '@/lib/csv';
@@ -29,6 +30,8 @@ interface Manifest {
   blobCount: number;
   includesAttachments: boolean;
   recordsSha256: string;
+  /** Versión del modelo de datos (ausente en respaldos de la versión 1). */
+  dataVersion?: number;
 }
 
 interface RowJson {
@@ -79,6 +82,7 @@ export async function createEncryptedBackup(opts: { includeAttachments: boolean 
     blobCount,
     includesAttachments: opts.includeAttachments,
     recordsSha256: await sha256Hex(recordsBytes as Uint8Array<ArrayBuffer>),
+    dataVersion: (await getMeta<number>(DATA_VERSION_KEY)) ?? currentDataVersion(),
   };
   files['manifest.json'] = strToU8(JSON.stringify(manifest, null, 2));
   files['records.json'] = [recordsBytes, { level: 6 }];
@@ -122,7 +126,8 @@ export async function parseBackup(file: Blob): Promise<ParsedBackup> {
     throw new BackupFormatError('El índice del respaldo está dañado.');
   }
   if (manifest.format !== BACKUP_FORMAT) throw new BackupFormatError('El archivo no es un respaldo de VetCasa.');
-  if (manifest.version > BACKUP_VERSION) throw new BackupFormatError('Este respaldo fue creado con una versión más nueva de VetCasa. Actualiza la app.');
+  if (manifest.version > BACKUP_VERSION || (manifest.dataVersion ?? 1) > currentDataVersion())
+    throw new BackupFormatError('Este respaldo fue creado con una versión más nueva de VetCasa. Cierra la app por completo y vuelve a abrirla con conexión a Internet para que se actualice.');
   const sum = await sha256Hex(rec as Uint8Array<ArrayBuffer>);
   if (sum !== manifest.recordsSha256) throw new BackupFormatError('El respaldo está dañado (la verificación de integridad no coincide).');
   const rowsJson = JSON.parse(strFromU8(rec)) as RowJson[];
@@ -192,6 +197,8 @@ async function writeRestore(header: C.VaultHeader, parsed: ParsedBackup) {
     done.catch(() => undefined);
     await tx.objectStore('meta').put({ key: 'vault', value: header });
     await tx.objectStore('meta').put({ key: 'restoredAt', value: new Date().toISOString() });
+    // Si el respaldo es de un modelo anterior, las migraciones se aplican al cargar.
+    await tx.objectStore('meta').put({ key: DATA_VERSION_KEY, value: parsed.manifest.dataVersion ?? 1 });
     for (const r of parsed.rows) await tx.objectStore('records').put(r);
     for (const b of parsed.blobs) await tx.objectStore('blobs').put(b);
     await done;
@@ -245,6 +252,7 @@ elimínalo cuando ya no lo necesites.
 
 Estructura
 - datos/<tabla>.json : todos los registros de cada tabla, en formato JSON.
+- info.json          : versión de la app y del modelo de datos con que se exportó.
 - csv/*.csv          : resúmenes en CSV (separador ";") para abrir en planillas.
 - adjuntos/          : fotografías y documentos, con el nombre "<id del adjunto>__<nombre original>".
 
@@ -266,7 +274,10 @@ Convenciones
 
 export async function exportOpenData(opts: { includeAttachments: boolean }): Promise<{ blob: Blob; fileName: string }> {
   const t = useDataStore.getState().tables;
-  const files: Zippable = { 'LEEME.txt': strToU8(OPEN_README) };
+  const files: Zippable = {
+    'LEEME.txt': strToU8(OPEN_README),
+    'info.json': strToU8(JSON.stringify({ app: 'VetCasa', appVersion: APP_VERSION, dataVersion: currentDataVersion(), exportedAt: new Date().toISOString() }, null, 2)),
+  };
   for (const [name, map] of Object.entries(t)) {
     if (name === 'drafts') continue;
     files[`datos/${name}.json`] = strToU8(JSON.stringify([...(map as Map<string, unknown>).values()], null, 1));

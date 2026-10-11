@@ -4,7 +4,7 @@ import { Button, type ButtonProps } from './Button';
 import { Sheet, toast } from './overlay';
 import { friendlyError } from '@/data/errors';
 import { downloadFile, openFile, shareFile } from '@/lib/share';
-import { canShareFiles } from '@/lib/platform';
+import { canShareFiles, isIOS, isStandalone } from '@/lib/platform';
 
 /**
  * Genera un PDF y ofrece compartirlo (hoja nativa de iOS), abrirlo o descargarlo.
@@ -54,6 +54,12 @@ export function PdfButton({
       toast.error(friendlyError(e));
     }
   };
+  const open = () => {
+    if (blob && !openFile(blob)) toast.info('No se pudo abrir una pestaña nueva. Usa “Descargar” o “Compartir”.');
+  };
+  // En la app instalada en iPhone, abrir una pestaña saca a la usuaria de la app: se usa la hoja de compartir (incluye Imprimir).
+  const shareable = canShareFiles();
+  const showOpen = !(shareable && isIOS() && isStandalone());
   return (
     <>
       <Button variant={variant} size={size} block={block} loading={busy} onClick={generate} icon={icon ?? <FileText className="size-4" />}>
@@ -67,14 +73,16 @@ export function PdfButton({
             </p>
             {note && <div className="text-sm text-ink-600">{note}</div>}
             <div className="grid gap-2">
-              {canShareFiles() && (
+              {shareable && (
                 <Button block size="lg" icon={<Share2 className="size-5" />} onClick={share}>
                   Compartir o guardar en Archivos
                 </Button>
               )}
-              <Button block variant="secondary" icon={<ExternalLink className="size-5" />} onClick={() => openFile(blob)}>
-                Abrir / imprimir
-              </Button>
+              {showOpen && (
+                <Button block variant="secondary" icon={<ExternalLink className="size-5" />} onClick={open}>
+                  Abrir / imprimir
+                </Button>
+              )}
               <Button block variant="secondary" icon={<Download className="size-5" />} onClick={() => downloadFile(blob, fileName)}>
                 Descargar
               </Button>

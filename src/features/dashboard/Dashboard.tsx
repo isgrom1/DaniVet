@@ -15,6 +15,7 @@ import { controlsDue, examsToReview, openTasks, paymentsDue, preventiveDue, type
 import { chargeBalance } from '@/features/finance/calc';
 import { inventoryAlerts } from '@/features/inventory/stock';
 import { PatientAvatar } from '@/features/attachments/AttachmentViews';
+import { capitalizeFirst } from '@/lib/text';
 
 export function Dashboard() {
   const tables = useTables();
@@ -26,7 +27,7 @@ export function Dashboard() {
 
   const data = useMemo(() => {
     const todays = appointmentsOnDay(tables, today, false);
-    const upcoming = appointmentsBetween(tables, addDays(today, 1), addDays(today, 7)).filter((a) => a.status !== 'cancelled');
+    const upcoming = appointmentsBetween(tables, addDays(today, 1), addDays(today, 7)).filter((a) => a.status !== 'cancelled' && a.status !== 'completed');
     const drafts = [...tables.consultations.values()].filter((c) => c.status === 'draft').sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
     const recentIds: string[] = [];
     for (const c of [...tables.consultations.values()].filter((c) => c.status === 'final').sort((a, b) => b.startedAt.localeCompare(a.startedAt))) {
@@ -156,7 +157,7 @@ export function Dashboard() {
     <>
       <PageHeader
         title={`${greet}${firstName ? `, ${firstName}` : ''}`}
-        subtitle={<span className="capitalize">{formatDate(today, 'long')}</span>}
+        subtitle={capitalizeFirst(formatDate(today, 'long'))}
         large
         actions={
           <>

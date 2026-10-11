@@ -1,0 +1,139 @@
+# Pruebas en cada cambio y publicación automática en GitHub Pages desde la rama principal del repositorio.
+# Después de publicar, el flujo de aceptación completo se ejecuta contra la URL real (HTTPS) desde los servidores de GitHub.
+name: Pruebas y publicación
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pruebas:
+    name: Pruebas (tipos, unitarias, compilación y flujo en iPhone emulado)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - name: Guardar resultados y capturas
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: resultados-pruebas
+          path: |
+            test-results/
+            e2e/.artifacts/
+          retention-days: 14
+          if-no-files-found: ignore
+
+  estado-pages:
+    name: ¿GitHub Pages está activado?
+    if: github.event_name != 'pull_request' && github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    permissions:
+      pages: read
+    outputs:
+      activado: ${{ steps.revisar.outputs.activado }}
+    steps:
+      - id: revisar
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh api "repos/${GITHUB_REPOSITORY}/pages" --silent 2>/dev/null; then
+            echo "activado=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "activado=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=Publicación pendiente::GitHub Pages no está activado. En GitHub: Settings → Pages → Build and deployment → Source: GitHub Actions (en un plan gratuito el repositorio debe ser público). Luego vuelve a ejecutar este flujo."
+          fi
+
+  publicar:
+    name: Publicar en GitHub Pages
+    needs: [pruebas, estado-pages]
+    if: needs.estado-pages.outputs.activado == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.despliegue.outputs.page_url }}
+    outputs:
+      url: ${{ steps.despliegue.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - id: pages
+        uses: actions/configure-pages@v5
+      - name: Compilar para la ruta publicada
+        run: npm run build
+        env:
+          BASE_PATH: ${{ steps.pages.outputs.base_path }}/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+      - id: despliegue
+        uses: actions/deploy-pages@v4
+
+  verificar:
+    name: Verificar la URL publicada desde Internet
+    needs: publicar
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      URL: ${{ needs.publicar.outputs.url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Esperar a que la URL responda por HTTPS
+        run: |
+          echo "URL publicada: $URL"
+          for i in $(seq 1 30); do
+            if curl -fsS -o /dev/null "$URL"; then break; fi
+            echo "Aún no responde (intento $i), esperando 10 s…"; sleep 10
+          done
+          curl -fsS -D - -o pagina.html "$URL" | head -n 15
+          grep -q '<div id="root">' pagina.html
+          curl -fsS -o /dev/null -w "manifest.webmanifest: %{http_code}\n" "${URL}manifest.webmanifest"
+          curl -fsS -o /dev/null -w "sw.js: %{http_code}\n" "${URL}sw.js"
+          curl -fsS -o /dev/null -w "apple-touch-icon.png: %{http_code}\n" "${URL}apple-touch-icon.png"
+      - run: npx playwright install --with-deps chromium
+      - name: Flujo de aceptación completo contra la URL publicada
+        run: npm run test:e2e
+        env:
+          E2E_BASE_URL: ${{ needs.publicar.outputs.url }}
+      - name: Guardar resultados y capturas
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verificacion-url-publicada
+          path: |
+            test-results/
+            e2e/.artifacts/
+          retention-days: 30
+          if-no-files-found: ignore

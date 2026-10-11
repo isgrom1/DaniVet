@@ -1,11 +1,12 @@
 import { openJson, sealJson } from '@/lib/crypto';
-import { getAllRecords, getRecord as idbGetRecord, withDb, type StoredRecord } from '@/lib/idb';
+import { getAllRecords, getMeta, getRecord as idbGetRecord, setMeta, withDb, type StoredRecord } from '@/lib/idb';
 import { newId, nowISO } from '@/lib/ids';
-import { ConflictError, IntegrityError, LockedRecordError, ValidationError, type FieldIssue } from './errors';
+import { ConflictError, IntegrityError, LockedRecordError, UserError, ValidationError, type FieldIssue } from './errors';
+import { currentDataVersion, DATA_VERSION_KEY, migrationsFrom, type RawTables } from './migrations';
 import { incomingRefs, idsAtPath, refsOf } from './relations';
 import { schemas, TABLES, type AuditEntry, type EntityOf, type NewEntity, type TableName } from './schema';
 import { applyChanges, emptyTables, getRecord, useDataStore } from './store';
-import { getDek, hasDek } from './vaultKey';
+import { getDek, hasDek, setDek } from './vaultKey';
 
 export const aadFor = (t: string, id: string) => `vetcasa:${t}:${id}`;
 
@@ -66,10 +67,17 @@ interface DelOp {
 // Carga inicial (al desbloquear)
 // ---------------------------------------------------------------------------
 export async function loadAll(): Promise<void> {
+  const savedVersion = await getMeta<number>(DATA_VERSION_KEY);
+  const fromVersion = savedVersion ?? 1;
+  if (fromVersion > currentDataVersion()) {
+    setDek(null);
+    useDataStore.setState({ tables: emptyTables(), status: 'locked', loadIssues: 0 });
+    throw new UserError('Estos datos se guardaron con una versión más nueva de VetCasa. Cierra la app por completo y vuelve a abrirla con conexión a Internet para que se actualice.');
+  }
   useDataStore.setState({ status: 'loading' });
   const dek = getDek();
   const rows = await getAllRecords();
-  const tables = emptyTables() as Record<TableName, Map<string, unknown>>;
+  const tables = emptyTables() as unknown as RawTables;
   let issues = 0;
   await Promise.all(
     rows.map(async (row) => {
@@ -79,16 +87,43 @@ export async function loadAll(): Promise<void> {
         return;
       }
       try {
-        const value = await openJson<Record<string, unknown>>(dek, aadFor(t, row.id), { iv: row.iv, ct: row.ct });
-        if (!looseSchemas[t].safeParse(value).success) issues++;
-        // Se conserva el valor original aunque no valide, para no ocultar ni perder información.
-        tables[t].set(row.id, value);
+        tables[t].set(row.id, await openJson<Record<string, unknown>>(dek, aadFor(t, row.id), { iv: row.iv, ct: row.ct }));
       } catch {
         issues++;
       }
     }),
   );
+  await runMigrations(tables, fromVersion);
+  if (savedVersion !== currentDataVersion()) await setMeta(DATA_VERSION_KEY, currentDataVersion());
+  // Se conservan los valores aunque no validen, para no ocultar ni perder información (se informan como advertencias).
+  for (const t of TABLES) for (const v of tables[t].values()) if (!looseSchemas[t].safeParse(v).success) issues++;
   useDataStore.setState({ tables: tables as never, status: 'ready', loadIssues: issues });
+}
+
+/** Aplica las migraciones pendientes a los registros descifrados y guarda cifrados los que cambiaron. */
+async function runMigrations(tables: RawTables, fromVersion: number): Promise<void> {
+  const steps = migrationsFrom(fromVersion);
+  if (!steps.length) return;
+  const changed = new Map<string, { table: TableName; id: string }>();
+  for (const m of steps) for (const c of m.run(tables)) changed.set(`${c.table}:${c.id}`, c);
+  const now = nowISO();
+  const puts: PutOp[] = [];
+  for (const { table, id } of changed.values()) {
+    const rec = tables[table].get(id);
+    if (!rec) continue;
+    const next = { ...rec, id, rev: Number(rec.rev ?? 0) + 1, updatedAt: now } as PutOp['record'];
+    tables[table].set(id, next);
+    puts.push({ table, record: next });
+  }
+  const log = auditRecord({
+    entity: 'system',
+    entityId: 'dataVersion',
+    action: 'update',
+    summary: `Actualización del modelo de datos a la versión ${steps[steps.length - 1].to} (${puts.length} registro(s)): ${steps.map((m) => m.description).join('; ')}`,
+  });
+  tables.auditLog.set(log.record.id, log.record);
+  puts.push(log);
+  await persist(puts, []);
 }
 
 // ---------------------------------------------------------------------------

@@ -22,6 +22,7 @@ import { patientAlerts } from '@/features/patients/selectors';
 import { AlertsPanel } from '@/features/patients/AlertsPanel';
 import { startConsultation } from '@/features/consultations/actions';
 import { appointmentIcs, apptEnd } from './selectors';
+import { capitalizeFirst } from '@/lib/text';
 
 const FLOW: AppointmentStatus[] = ['pending', 'confirmed', 'en_route', 'in_progress', 'completed'];
 
@@ -149,7 +150,7 @@ export function AppointmentDetail() {
         <Card className="space-y-2">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <p className="text-lg font-bold capitalize">{formatDate(a.start, 'long')}</p>
+              <p className="text-lg font-bold">{capitalizeFirst(formatDate(a.start, 'long'))}</p>
               <p className="flex items-center gap-1 text-[15px] text-ink-600">
                 <Clock className="size-4" /> {formatTime(a.start)}–{formatTime(apptEnd(a))} ({a.durationMin} min)
                 {a.travelMin !== undefined && ` · traslado ${a.travelMin} min`}

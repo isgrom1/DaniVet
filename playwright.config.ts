@@ -11,6 +11,7 @@ const iphone = (name: string) => {
   return { ...d, browserName: 'chromium' as const };
 };
 
+// Las rutas de las pruebas son relativas ('./'), así que también funcionan bajo /DaniVet/ en GitHub Pages.
 const baseURL = process.env.E2E_BASE_URL ?? 'http://localhost:4173/';
 
 export default defineConfig({

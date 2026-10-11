@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Calculator, FilePlus2, FlaskConical, Pill, Plus, Syringe, Trash2, Bug, Receipt, ListTodo, FileSignature } from 'lucide-react';
 import { Button } from '@/components/Button';
 import { Badge, Card, List, ListRow, Notice } from '@/components/Card';
@@ -264,10 +264,19 @@ export function AssessmentSection() {
   );
 }
 
-/** Navega a otra pantalla guardando antes el borrador. */
+/** Navega a otra pantalla después de guardar el borrador (la pantalla siguiente usa lo recién escrito). */
 export function NavButton({ to, icon, children }: { to: string; icon?: React.ReactNode; children: React.ReactNode }) {
+  const navigate = useNavigate();
   return (
-    <Link to={to} onClick={() => void flushAll()} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-sand-300 bg-white px-3 text-sm font-semibold text-brand-800 active:bg-sand-200">
+    <Link
+      to={to}
+      onClick={async (e) => {
+        e.preventDefault();
+        await flushAll();
+        navigate(to);
+      }}
+      className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-sand-300 bg-white px-3 text-sm font-semibold text-brand-800 active:bg-sand-200"
+    >
       {icon}
       {children}
     </Link>

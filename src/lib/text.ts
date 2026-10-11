@@ -49,6 +49,11 @@ export function initials(name: string): string {
   return ((parts[0]?.[0] ?? '') + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
 }
 
+/** Mayúscula solo en la primera letra (en español, "Domingo, 11 de octubre"; no "De Octubre"). */
+export function capitalizeFirst(s: string): string {
+  return s ? s.charAt(0).toLocaleUpperCase('es-CL') + s.slice(1) : s;
+}
+
 export function truncate(s: string, n: number): string {
   return s.length > n ? `${s.slice(0, n - 1)}…` : s;
 }

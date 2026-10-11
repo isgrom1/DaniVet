@@ -30,14 +30,13 @@ export function downloadFile(blob: Blob, fileName: string): void {
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
-export function openFile(blob: Blob): void {
+/** Abre el archivo en una pestaña nueva. Devuelve false si el navegador no permitió abrirla. */
+export function openFile(blob: Blob): boolean {
   const url = URL.createObjectURL(blob);
-  const w = window.open(url, '_blank', 'noopener');
-  if (!w) {
-    // Si el navegador bloquea la ventana, se navega en la misma pestaña.
-    window.location.assign(url);
-  }
+  // Sin 'noopener': con esa opción window.open devuelve null aunque la pestaña sí se abra.
+  const w = window.open(url, '_blank');
   setTimeout(() => URL.revokeObjectURL(url), 5 * 60_000);
+  return !!w;
 }
 
 export function safeFileName(s: string): string {

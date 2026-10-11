@@ -2,6 +2,7 @@ import { UserError } from './errors';
 import * as C from '@/lib/crypto';
 import { deleteMeta, getMeta, requestPersistence, setMeta, wipeAll } from '@/lib/idb';
 import { batch, loadAll } from './repo';
+import { currentDataVersion, DATA_VERSION_KEY } from './migrations';
 import { defaultSettings, defaultSpecies, defaultTemplates } from './defaults';
 import { emptyTables, useDataStore } from './store';
 import { getDek, hasDek, setDek } from './vaultKey';
@@ -48,6 +49,7 @@ export async function createAccount(passphrase: string, init: AccountInit, itera
   if (await readVaultHeader()) throw new UserError('Ya existe una cuenta en este dispositivo.');
   const vault = await C.createVault(passphrase, iterations);
   await setMeta(VAULT_KEY, vault.header);
+  await setMeta(DATA_VERSION_KEY, currentDataVersion());
   setDek(vault.dek);
   useDataStore.setState({ tables: emptyTables(), status: 'ready', loadIssues: 0 });
   const b = batch();

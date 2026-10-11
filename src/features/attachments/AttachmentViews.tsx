@@ -8,7 +8,7 @@ import type { Attachment, Patient } from '@/data/schema';
 import { friendlyError } from '@/data/errors';
 import { formatDate } from '@/lib/dates';
 import { cn } from '@/lib/cn';
-import { openFile, shareFile } from '@/lib/share';
+import { downloadFile, openFile, shareFile } from '@/lib/share';
 import { deleteAttachment, formatBytes, readBlob, saveAttachment, useBlobUrl, type SaveAttachmentInput } from './attachments';
 
 export function PatientAvatar({ patient, size = 44 }: { patient: Patient; size?: number }) {
@@ -131,14 +131,15 @@ function AttachmentViewer({ a, onClose }: { a: Attachment; onClose: () => void }
     try {
       const blob = await readBlob(a.blobId, a.mimeType);
       const res = await shareFile(blob, a.fileName);
-      if (res === 'unsupported') openFile(blob);
+      if (res === 'unsupported' && !openFile(blob)) downloadFile(blob, a.fileName);
     } catch (e) {
       toast.error(friendlyError(e));
     }
   };
   const open = async () => {
     try {
-      openFile(await readBlob(a.blobId, a.mimeType));
+      const blob = await readBlob(a.blobId, a.mimeType);
+      if (!openFile(blob)) downloadFile(blob, a.fileName);
     } catch (e) {
       toast.error(friendlyError(e));
     }
