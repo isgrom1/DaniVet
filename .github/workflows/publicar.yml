@@ -30,7 +30,10 @@ jobs:
       - run: npm test
       - run: npm run build
       - run: npx playwright install --with-deps chromium
-      - run: npm run test:e2e
+      - name: Flujo de aceptación y actualización real de la app instalada
+        run: npm run test:e2e
+        env:
+          E2E_UPDATE: '1'
       - name: Guardar resultados y capturas
         if: always()
         uses: actions/upload-artifact@v4

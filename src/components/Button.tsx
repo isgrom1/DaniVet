@@ -1,4 +1,4 @@
-import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
+import { forwardRef, type AnchorHTMLAttributes, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import { Link, type LinkProps } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/cn';
@@ -126,6 +126,32 @@ export function ActionLink({
         'inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-sand-300 bg-white px-3 text-[15px] font-semibold text-brand-800 active:bg-sand-200',
         className,
       )}
+    >
+      {icon}
+      {children}
+    </a>
+  );
+}
+
+/** Enlace a otra app (WhatsApp, correo) con el aspecto de un botón. */
+export function ExternalButton({
+  variant = 'primary',
+  size = 'md',
+  block,
+  icon,
+  className,
+  children,
+  href,
+  ...rest
+}: AnchorHTMLAttributes<HTMLAnchorElement> & { href: string; variant?: Variant; size?: Size; block?: boolean; icon?: ReactNode }) {
+  const web = href.startsWith('http');
+  return (
+    <a
+      href={href}
+      target={web ? '_blank' : undefined}
+      rel={web ? 'noopener noreferrer' : undefined}
+      className={cn('inline-flex select-none items-center justify-center font-semibold transition-colors', variants[variant], sizes[size], block && 'w-full', className)}
+      {...rest}
     >
       {icon}
       {children}

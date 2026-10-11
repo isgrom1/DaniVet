@@ -112,7 +112,9 @@ Para publicar en otro hosting estático (Netlify, Cloudflare Pages, un dominio p
 - **Cambiar el nombre de la app:** ver la sección siguiente.
 - **Íconos:** `scripts/icon-source.mjs` y `npm run icons`.
 - **Especies, rangos de referencia, medicamentos frecuentes, pautas de vacunación, plantillas, servicios y medios de pago:** se configuran dentro de la app (*Más › …*), no requieren cambios de código.
-- **Publicar una versión:** push a la rama por defecto. La app instalada detecta la versión nueva y muestra "Actualizar"; la usuaria decide cuándo (se guardan antes los formularios abiertos).
+- **Publicar una versión:** seguir la lista de `CLAUDE.md` (subir versión, agregar novedades en `src/changelog.ts`, pruebas, push a la rama por defecto y revisar que el flujo termine en verde).
+- **Cómo llega la actualización a cada teléfono** (`src/lib/sw.ts`): la app busca versión nueva al abrirse, al volver a primer plano y cada hora. Si está bloqueada la instala de inmediato; si está en uso muestra "Actualizar ahora" y, si no se toca, la instala al bloquearse (antes guarda lo abierto). Luego muestra las novedades una vez (`src/features/more/WhatsNew.tsx`). *Más › Acerca de la app › Buscar actualizaciones* fuerza la búsqueda.
+- **Sugerencias desde la app:** *Más › Sugerir un cambio o reportar un problema* arma un mensaje (texto de la usuaria + versión + tipo de equipo, sin datos clínicos) y lo abre en WhatsApp o en el correo para elegir el destinatario.
 - **Revisión periódica sugerida:** cambios normativos (Ley 21.719, recetas SAG), compatibilidad con la última versión de iOS y que el flujo de publicación siga en verde.
 
 ### Cambiar el nombre de la app
@@ -136,7 +138,7 @@ Al cambiarla y publicar (push a la rama principal), cambian: el nombre bajo el �
 npm ci
 npm run dev           # http://localhost:5173
 npm run typecheck
-npm test              # Vitest + fake-indexeddb (42 pruebas)
+npm test              # Vitest + fake-indexeddb (47 pruebas)
 npm run build && npm run test:e2e        # Playwright con emulación de iPhone (requiere Chromium)
 E2E_BASE_URL=https://isgrom1.github.io/DaniVet/ npm run test:e2e   # contra la URL publicada
 ```

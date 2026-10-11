@@ -348,6 +348,28 @@ test('flujo completo de la veterinaria a domicilio', async ({ page, context, bro
     await shot(p, testInfo, '16-inicio-con-datos');
   });
 
+  await test.step('16b. Sugerencias por WhatsApp y búsqueda de actualizaciones', async () => {
+    const p = page2!;
+    await tab(p, 'Más');
+    await p.getByRole('button', { name: /Sugerir un cambio o reportar un problema/ }).click();
+    const fb = dialog(p, 'Sugerir un cambio o reportar un problema');
+    await expect(fb.getByRole('button', { name: 'Escribe tu mensaje para enviarlo' })).toBeDisabled();
+    await fb.getByLabel('¿Qué te gustaría cambiar o agregar?').fill('Que la agenda muestre los km del día');
+    const href = (await fb.getByRole('link', { name: 'Enviar por WhatsApp' }).getAttribute('href'))!;
+    expect(href.startsWith('https://wa.me/?text=')).toBe(true);
+    const msg = decodeURIComponent(href.slice('https://wa.me/?text='.length));
+    expect(msg).toContain('Sugerencia');
+    expect(msg).toContain('Que la agenda muestre los km del día');
+    expect(msg).toMatch(/Versión \d+\.\d+\.\d+/);
+    expect(msg).not.toContain(TUTOR);
+    await shot(p, testInfo, '16b-sugerencia');
+    await fb.getByRole('button', { name: 'Cerrar' }).click();
+    await menu(p, /Acerca de la app/);
+    await p.getByRole('button', { name: 'Buscar actualizaciones' }).click();
+    await expectToast(p, 'Ya tienes la última versión.');
+    await expect(p.getByText('Novedades por versión')).toBeVisible();
+  });
+
   let backup: { name: string; file: string; bytes: Uint8Array } = { name: '', file: '', bytes: new Uint8Array() };
   await test.step('17. Respaldo cifrado, verificación y exportación abierta', async () => {
     const p = page2!;

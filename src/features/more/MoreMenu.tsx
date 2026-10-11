@@ -12,6 +12,7 @@ import {
   LayoutDashboard,
   ListTodo,
   Lock,
+  MessageSquarePlus,
   PawPrint,
   Pill,
   Receipt,
@@ -25,7 +26,7 @@ import {
   UsersRound,
   Wand2,
 } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { PageHeader, Page } from '@/components/layout';
 import { Button } from '@/components/Button';
 import { List, ListRow, Section } from '@/components/Card';
@@ -33,11 +34,13 @@ import { useProfile } from '@/data/hooks';
 import { lock } from '@/data/session';
 import { flushAll } from '@/lib/flush';
 import { APP_VERSION } from '@/lib/platform';
+import { FeedbackSheet } from './FeedbackSheet';
 
 const I = ({ children }: { children: ReactNode }) => <span className="flex size-9 items-center justify-center rounded-xl bg-brand-50 text-brand-700">{children}</span>;
 
 export function MoreMenu() {
   const profile = useProfile();
+  const [feedback, setFeedback] = useState(false);
   return (
     <>
       <PageHeader title="Más opciones" large subtitle={profile?.fullName} />
@@ -82,6 +85,7 @@ export function MoreMenu() {
         <Section title="Ayuda">
           <List>
             <ListRow to="/ayuda" leading={<I><BookOpen className="size-5" /></I>} title="Guía de uso e instalación en iPhone" />
+            <ListRow onClick={() => setFeedback(true)} leading={<I><MessageSquarePlus className="size-5" /></I>} title="Sugerir un cambio o reportar un problema" subtitle="Se envía por WhatsApp o correo" />
             <ListRow to="/ajustes/acerca" leading={<I><Info className="size-5" /></I>} title="Acerca de la app" subtitle={`Versión ${APP_VERSION}`} />
           </List>
         </Section>
@@ -101,6 +105,7 @@ export function MoreMenu() {
           <CircleHelp className="size-3.5" /> Tus datos se guardan cifrados solo en este dispositivo.
         </p>
       </Page>
+      {feedback && <FeedbackSheet onClose={() => setFeedback(false)} />}
     </>
   );
 }

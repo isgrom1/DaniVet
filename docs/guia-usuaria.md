@@ -65,9 +65,11 @@ El archivo `.dapp` está cifrado: sin tu contraseña o tu clave de recuperación
 - La **exportación abierta** (sin cifrar) y los PDF/CSV contienen datos personales legibles: compártelos solo con quien corresponda y bórralos cuando ya no los necesites.
 - Para atender una solicitud de un tutor (acceso, corrección o eliminación de sus datos) usa su ficha: exportar, editar o **Anonimizar datos personales**.
 
-## 6. Actualizaciones
+## 6. Actualizaciones y sugerencias
 
-Cuando haya una versión nueva, aparecerá un aviso **"Hay una nueva versión de la app disponible"** con el botón **Actualizar**. Tus datos se conservan. Antes de actualizar, idealmente crea un respaldo.
+**La app se actualiza sola.** Busca versiones nuevas al abrirla y al volver a ella. Si está bloqueada, instala la versión nueva de inmediato. Si la estás usando, verás el aviso **"Hay una versión nueva"** con **Actualizar ahora**; si no lo tocas, se instala sola la próxima vez que la app se bloquee, después de guardar lo que estabas escribiendo. Tus datos se conservan. Después de actualizarse te muestra sus **novedades** (también en *Más › Acerca de la app*, donde además puedes **Buscar actualizaciones**).
+
+**¿Quieres pedir un cambio o encontraste un problema?** Usa *Más › Sugerir un cambio o reportar un problema*: escribe qué te gustaría o qué pasó y envíalo por **WhatsApp** o **correo** a quien mantiene la app. Se agrega automáticamente la versión y el tipo de equipo; no escribas nombres de tutores o pacientes ni datos clínicos.
 
 ## 7. Preguntas frecuentes
 

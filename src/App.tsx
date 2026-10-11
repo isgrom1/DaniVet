@@ -66,6 +66,7 @@ import { PrivacyInfo } from '@/features/settings/PrivacyInfo';
 import { AboutPage } from '@/features/settings/AboutPage';
 import { AuditLogPage } from '@/features/audit/AuditLogPage';
 import { HelpPage } from '@/features/more/HelpPage';
+import { WhatsNew } from '@/features/more/WhatsNew';
 
 export function App() {
   const status = useDataStore((s) => s.status);
@@ -166,9 +167,9 @@ function UpdateBanner() {
   if (!ready) return null;
   return (
     <div className="flex items-center justify-between gap-3 bg-brand-800 px-4 py-2 text-[14px] text-white no-print" role="status">
-      <span>Hay una nueva versión de la app disponible.</span>
+      <span>Hay una versión nueva. Se instala sola al bloquear la app.</span>
       <button type="button" onClick={() => void applyUpdate()} className="flex min-h-9 items-center gap-1.5 rounded-lg bg-white/15 px-3 font-semibold">
-        <RefreshCw className="size-4" /> Actualizar
+        <RefreshCw className="size-4" /> Actualizar ahora
       </button>
     </div>
   );
@@ -182,6 +183,7 @@ function AppShell() {
       <ScrollToTop />
       <OfflineBanner />
       <UpdateBanner />
+      <WhatsNew />
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/agenda" element={<AgendaPage />} />

@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react';
+import { RefreshCw } from 'lucide-react';
 import { PageHeader, Page } from '@/components/layout';
 import { Card, KeyValue, Notice, Section } from '@/components/Card';
+import { Button } from '@/components/Button';
+import { toast } from '@/components/overlay';
+import { applyUpdate, checkForUpdate } from '@/lib/sw';
+import { useUiState } from '@/lib/uiState';
+import { ReleaseNotes } from '@/features/more/WhatsNew';
 import { useTables } from '@/data/hooks';
 import { useDataStore } from '@/data/store';
 import { estimateStorage } from '@/lib/idb';
@@ -15,6 +21,19 @@ export function AboutPage() {
   useEffect(() => {
     void estimateStorage().then(setSt);
   }, []);
+  const updateReady = useUiState((s) => s.updateReady);
+  const [checking, setChecking] = useState(false);
+  const check = async () => {
+    setChecking(true);
+    try {
+      const r = await checkForUpdate();
+      if (r === 'current') toast.success('Ya tienes la última versión.');
+      else if (r === 'offline') toast.error('Sin conexión: no se pudo buscar. Inténtalo con Internet.');
+      else if (r === 'unsupported') toast.info('Las actualizaciones automáticas funcionan en la app publicada.');
+    } finally {
+      setChecking(false);
+    }
+  };
   return (
     <>
       <PageHeader title="Acerca de" back="/mas" />
@@ -31,6 +50,27 @@ export function AboutPage() {
             <KeyValue label="Adjuntos" value={String(tables.attachments.size)} />
           </dl>
         </Card>
+        <Section title="Actualizaciones">
+          <Card className="space-y-3">
+            <p className="text-[15px] text-ink-700">
+              La app se actualiza sola: busca versiones nuevas al abrirla y al volver a ella, y las instala cuando está bloqueada, sin perder lo que estabas escribiendo.
+            </p>
+            {updateReady ? (
+              <Button block icon={<RefreshCw className="size-4" />} onClick={() => void applyUpdate()}>
+                Instalar la versión nueva ahora
+              </Button>
+            ) : (
+              <Button block variant="secondary" icon={<RefreshCw className="size-4" />} loading={checking} onClick={() => void check()}>
+                Buscar actualizaciones
+              </Button>
+            )}
+          </Card>
+        </Section>
+        <Section title="Novedades por versión">
+          <Card>
+            <ReleaseNotes />
+          </Card>
+        </Section>
         {issues > 0 && <Notice tone="warning">Hay {issues} registro(s) que no pudieron validarse al abrir la app. Se conservan sin cambios; crea un respaldo y contacta a soporte técnico.</Notice>}
         <Section title="Tecnología">
           <Card className="space-y-2 text-sm text-ink-700">

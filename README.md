@@ -9,6 +9,8 @@ Aplicación web instalable (PWA) para una médica veterinaria independiente que 
 
 ## Documentación
 
+Para pedir cambios: `CLAUDE.md` describe cómo se implementa, prueba y publica cada pedido.
+
 | Documento | Para quién | Contenido |
 | --- | --- | --- |
 | [Guía de uso](docs/guia-usuaria.md) | La veterinaria | Instalar en el iPhone, crear la cuenta, uso diario, PIN, respaldos |
@@ -32,13 +34,15 @@ Aplicación web instalable (PWA) para una médica veterinaria independiente que 
 - **Finanzas**: servicios y precios, cobros con ítems (honorarios, medicamentos, insumos, traslado), abonos y pagos, gastos con kilometraje, presupuestos convertibles en cobro, reportes por período, exportación CSV, comprobante interno en PDF (**no es boleta ni factura**).
 - **Inventario (opcional)**: productos, lotes con vencimiento, movimientos y descuento desde vacunas.
 - **Búsqueda global**, **historial de cambios cifrado**, **recordatorios dentro de la app**.
+- **Actualización automática** (se instala sola cuando la app está bloqueada; muestra las novedades) y **Sugerir un cambio o reportar un problema** por WhatsApp o correo, con la versión incluida.
 - **Respaldo cifrado (.dapp)**, verificación de un respaldo sin restaurarlo, restauración (con contraseña o clave de recuperación), **exportación abierta** (JSON con relaciones, CSV y adjuntos; exige confirmar la contraseña) y PDF de la ficha de un paciente.
 - **Modo sin conexión** completo, **datos de demostración** marcados "(DEMO)" que se cargan y eliminan desde Ajustes, perfil profesional (logo y firma para documentos) y personalización (nombre de la app, especies, rangos de referencia, medicamentos frecuentes, plantillas, medios de pago).
 
 ## Resultados de las pruebas (ejecutadas realmente)
 
-- **Unitarias (Vitest):** 42 de 42 aprobadas en 7 archivos: cifrado y bóveda, integridad referencial, conflictos, consultas y enmiendas, calculadora de dosis, finanzas, recordatorios, duplicados, agenda, respaldo/restauración/manipulación, PDF con extracción de texto y migraciones de datos.
-- **Extremo a extremo (Playwright, Chromium emulando iPhone SE, iPhone 15 y iPhone 15 Pro Max):** 6 de 6 aprobadas, en `/` y también bajo la ruta `/DaniVet/` que usará GitHub Pages. El flujo de aceptación tiene 20 pasos: cuenta → tutor → dos animales → visita → consulta → tratamiento → vacuna → receta PDF → cobro y pago → cerrar y reabrir → persistencia → enmienda → respaldo y exportación → reglas de acceso → restauración en otro teléfono → sin conexión.
+- **Unitarias (Vitest):** 47 de 47 aprobadas en 8 archivos: cifrado y bóveda, integridad referencial, conflictos, consultas y enmiendas, calculadora de dosis, finanzas, recordatorios, duplicados, agenda, respaldo/restauración/manipulación, PDF con extracción de texto, migraciones de datos, novedades por versión y mensajes de sugerencia.
+- **Extremo a extremo (Playwright, Chromium emulando iPhone SE, iPhone 15 y iPhone 15 Pro Max):** 6 de 6 aprobadas, en `/` y también bajo la ruta `/DaniVet/` que usará GitHub Pages. El flujo de aceptación tiene 21 pasos: cuenta → tutor → dos animales → visita → consulta → tratamiento → vacuna → receta PDF → cobro y pago → cerrar y reabrir → persistencia → enmienda → sugerencias y búsqueda de actualizaciones → respaldo y exportación → reglas de acceso → restauración en otro teléfono → sin conexión.
+- **Actualización real de la app instalada** (`e2e/update.spec.ts`): una versión nueva se instala sola con la app bloqueada, avisa sin interrumpir mientras se usa, conserva los datos y muestra las novedades una vez.
 - **En GitHub Actions** (servidores de GitHub): tipos, unitarias, compilación y las 6 pruebas E2E aprobadas ([ejecución n.º 1](https://github.com/isgrom1/DaniVet/actions/runs/38176565733)). Cada cambio vuelve a ejecutarlas.
 - **Contra la URL publicada** (https://isgrom1.github.io/DaniVet/, desde Internet): 6 de 6 aprobadas en 1,9 min ([ejecución n.º 3](https://github.com/isgrom1/DaniVet/actions/runs/38177804095)).
 - **No probado en un iPhone real** (no hay Safari/WebKit en este entorno). Detalle en [docs/pruebas.md](docs/pruebas.md).

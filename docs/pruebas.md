@@ -7,7 +7,7 @@ Ejecutadas el 11 de octubre de 2026 sobre el código de esta rama. Todas las cif
 | Prueba | Resultado |
 | --- | --- |
 | Tipos (TypeScript estricto) | Sin errores |
-| Unitarias (Vitest, 7 archivos) | **42 / 42 aprobadas** |
+| Unitarias (Vitest, 8 archivos) | **47 / 47 aprobadas** |
 | Compilación de producción | Correcta. JS principal 269 KB comprimido; generador de PDF 186 KB, se carga solo al crear un PDF; 1,4 MB guardados para uso sin conexión |
 | Dependencias (`npm audit`) | 0 vulnerabilidades |
 | Extremo a extremo (Playwright) en `/` | **6 / 6 aprobadas** (2 min 5 s) |
@@ -36,16 +36,19 @@ Archivo `e2e/acceptance.spec.ts`. Se ejecuta en Chromium emulando **iPhone SE (3
 14. **Enmienda** con motivo: se conserva la versión 1 y se muestra el motivo.
 15. **Cerrar y volver a abrir**: pide la contraseña, rechaza una incorrecta y abre con la correcta.
 16. **Persistencia y asociaciones**: pacientes, historial, vacunas, recetas, peso corregido, tutor con 2 mascotas y sin deuda.
+    - 16b. **Sugerencias y actualizaciones**: el mensaje para WhatsApp incluye el texto, la versión y el equipo (y no datos de tutores); *Buscar actualizaciones* informa "Ya tienes la última versión".
 17. **Respaldo cifrado** (sin texto legible), **verificación** con contraseña incorrecta y correcta, **exportación abierta** con contraseña: se comprueba en el ZIP que pacientes→tutor, consulta→receta/vacuna/cobro y pagos→cobro conservan sus relaciones.
 18. **Reglas de acceso**: IndexedDB no contiene en claro nombres, diagnósticos, medicamentos, direcciones, teléfonos ni el nombre de la profesional; "Bloquear ahora" impide ver datos aunque se navegue a una pantalla interna; **otro perfil del navegador** (otra persona) no ve ningún dato.
 19. **Restaurar el respaldo en otro teléfono** (contexto vacío): aparecen pacientes, tutora, consulta finalizada y receta.
 20. **Sin conexión**: con la red cortada la app abre desde el service worker, se desbloquea, muestra el aviso "Sin conexión", registra un peso y lo conserva tras recargar.
 
+Además, `e2e/update.spec.ts` (**actualización real**, en GitHub Actions en cada cambio) instala la app, compila una versión nueva mientras está abierta y comprueba: con la app bloqueada, la versión nueva se instala sola al abrirla (servida por la app instalada, no por la red); en uso, aparece el aviso sin interrumpir y la versión se instala al bloquear; los datos se conservan; y las novedades se muestran una sola vez.
+
 Además, `la app se puede instalar` comprueba el manifiesto (`standalone`, `es-CL`, ícono 512×512), el ícono para iPhone, las etiquetas para pantalla de inicio y la política de seguridad de contenidos.
 
 Durante todo el flujo se registran los errores de JavaScript de la página: **ninguno**.
 
-## Pruebas unitarias (42)
+## Pruebas unitarias (47)
 
 | Archivo | Pruebas | Qué verifica |
 | --- | --- | --- |
@@ -55,6 +58,7 @@ Durante todo el flujo se registran los errores de JavaScript de la página: **ni
 | `src/features/domain.test.ts` | 6 | Totales, abonos y saldos; recordatorios solo con fechas registradas; control pendiente hasta registrarlo; enmienda con versión anterior; duplicados sin fusión; superposición y traslado |
 | `src/features/prescriptions/dose.test.ts` | 8 | mg/kg con mg/mL; µg a mg y comprimidos; % p/v; detención por falta de peso, unidades incompatibles y valores inválidos; dosis fija; intervalos irregulares |
 | `src/pdf/pdf.test.ts` | 3 | Receta, certificado de vacunación y comprobante interno (texto extraído del PDF); reemplazo de caracteres no admitidos |
+| `src/changelog.test.ts` | 5 | Cada versión tiene sus novedades (coincide con `package.json`), comparación de versiones, novedades desde la última versión vista, mensaje de sugerencia sin datos personales |
 | `src/lib/utils.test.ts` | 9 | Teléfonos chilenos, RUT (con K), números y montos, fechas locales y edades, búsqueda sin tildes, CSV seguro, clave de recuperación y contraseñas |
 
 ## Lo que no se pudo probar
