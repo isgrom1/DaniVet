@@ -71,6 +71,56 @@ describe('dictado de valores', () => {
     expect(by.hct.refLow).toBeUndefined();
   });
 
+  it('lee un informe pegado (texto copiado de una foto o PDF), con unidades y rangos sin la palabra referencia', () => {
+    const informe = [
+      'LABORATORIO CLÍNICO VETERINARIO',
+      'Paciente: Toby   Fecha: 10-10-2026',
+      'HEMATOCRITO ........ 45,2 % 37,0 - 55,0',
+      'Hemoglobina 15,1 g/dL (12,0 - 18,0)',
+      'LEUCOCITOS 12.500 /uL 6.000 - 17.000',
+      'Plaquetas 250 x10^3/uL 200 - 500',
+      'Eritrocitos 6,8 x10^6/µL 5,5-8,5',
+      'BIOQUÍMICA',
+      'CREATININA 1,8 H mg/dL 0,5 - 1,5',
+      'ALT (GPT) 85 U/L 10 - 100',
+      'Relación albúmina/globulina 0,8',
+      'Glucosa 110 mg/dL < 120',
+      'Densidad 1.025 1.015 - 1.045',
+    ].join('\n');
+    const { values, unplaced } = parseLabDictation(informe);
+    const by = Object.fromEntries(values.map((v) => [v.code, v]));
+    expect(by.hct).toMatchObject({ value: 45.2, unit: '%', refLow: 37, refHigh: 55 });
+    expect(by.hgb).toMatchObject({ value: 15.1, unit: 'g/dL', refLow: 12, refHigh: 18 });
+    // Recuento absoluto: valor y rango pasan juntos a ×10³/µL.
+    expect(by.wbc).toMatchObject({ value: 12.5, unit: '×10³/µL', refLow: 6, refHigh: 17 });
+    expect(by.wbc.warning).toMatch(/Informado en \/µL/);
+    expect(by.plt).toMatchObject({ value: 250, unit: '×10³/µL', refLow: 200, refHigh: 500 });
+    expect(by.rbc).toMatchObject({ value: 6.8, unit: '×10⁶/µL', refLow: 5.5, refHigh: 8.5 });
+    // La marca "H" del informe no queda como nota; la sigla entre paréntesis no corta el valor.
+    expect(by.crea).toMatchObject({ value: 1.8, unit: 'mg/dL', refLow: 0.5, refHigh: 1.5 });
+    expect(by.crea.note).toBeUndefined();
+    expect(by.alt).toMatchObject({ value: 85, unit: 'U/L', refLow: 10, refHigh: 100 });
+    expect(by.glu).toMatchObject({ value: 110, refHigh: 120 });
+    expect(by.glu.refLow).toBeUndefined();
+    expect(by.usg).toMatchObject({ value: 1.025, refLow: 1.015, refHigh: 1.045 });
+    // Lo no reconocido aparece por línea, sin quedar pegado como nota del valor anterior.
+    expect(unplaced).toEqual(['LABORATORIO CLÍNICO VETERINARIO', 'Paciente: Toby Fecha: 10-10-2026', 'BIOQUÍMICA', 'Relación albúmina/globulina 0,8']);
+    expect(values).toHaveLength(9);
+  });
+
+  it('no toma el valor de otra línea si el informe viene en columnas', () => {
+    const { values } = parseLabDictation('HEMATOCRITO\nHEMOGLOBINA\n45,2\n15,1');
+    expect(values).toEqual([]);
+  });
+
+  it('respeta la unidad del informe cuando no es la habitual', () => {
+    const { values } = parseLabDictation('Creatinina 159 µmol/L 44 - 133\nHemoglobina 151 g/L');
+    expect(values.map((v) => [v.code, v.value, v.unit, v.refLow, v.refHigh])).toEqual([
+      ['crea', 159, 'µmol/L', 44, 133],
+      ['hgb', 151, 'g/L', undefined, undefined],
+    ]);
+  });
+
   it('acepta números en palabras y deja sin ubicar lo que no reconoce', () => {
     const { values, unplaced } = parseLabDictation('Informe del laboratorio. Glucosa ciento diez, potasio 4,5');
     expect(values.map((v) => [v.code, v.value])).toEqual([

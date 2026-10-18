@@ -12,6 +12,15 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.2.1',
+    date: '2026-10-18',
+    items: [
+      'Valores de exámenes: al pegar el texto de un informe (copiado de una foto o PDF en el iPhone) ahora se toman también la unidad y el rango de referencia de cada línea, y se reconocen nombres como «ALT (GPT)».',
+      'Las líneas del informe que no se reconocen se muestran aparte, en vez de quedar como nota del valor anterior.',
+      'En «Dictar o pegar» se explica cómo copiar el texto de una foto o PDF del informe.',
+    ],
+  },
+  {
     version: '1.2.0',
     date: '2026-10-18',
     items: [

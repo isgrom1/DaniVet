@@ -124,7 +124,7 @@ test('dictado de la consulta y evolución de los exámenes', async ({ page }, te
     await savedExam(page);
   });
 
-  await test.step('Segundo examen dictado: rango recordado, valor anterior y alerta', async () => {
+  await test.step('Segundo examen dictado y pegado: rango recordado, valor anterior y alerta', async () => {
     await page.goto(patientUrl);
     await page.getByRole('tab', { name: 'Exámenes' }).click();
     await page.getByRole('link', { name: 'Nuevo' }).click();
@@ -133,9 +133,15 @@ test('dictado de la consulta y evolución de los exámenes', async ({ page }, te
     await page.getByLabel('Estado del examen').selectOption({ label: 'Revisado' });
     await page.getByRole('button', { name: 'Dictar o pegar' }).click();
     const sheet = dialog(page, 'Dictar o pegar valores');
-    await sheet.getByLabel('Valores dictados o pegados').fill('creatinina 1,9, ALT 85, glucosa 110 referencia 70 a 120');
+    // Un valor dictado y líneas pegadas de un informe (como las copia el iPhone desde una foto o un PDF).
+    await sheet
+      .getByLabel('Valores dictados o pegados')
+      .fill('creatinina 1,9\nALT (GPT) 85 U/L 10 - 100\nGLUCOSA 110 mg/dL 70 - 120\nRelación albúmina/globulina 0,8');
     await expect(sheet.getByRole('checkbox', { name: /Creatinina: 1,9 mg\/dL/ })).toBeChecked();
+    await expect(sheet.getByRole('checkbox', { name: /ALT \(GPT\): 85 U\/L \(ref\. 10–100\)/ })).toBeChecked();
     await expect(sheet.getByRole('checkbox', { name: /Glucosa: 110 mg\/dL \(ref\. 70–120\)/ })).toBeChecked();
+    await expect(sheet.getByText('No se reconoció')).toBeVisible();
+    await expect(sheet.getByText('«Relación albúmina/globulina 0,8»')).toBeVisible();
     await sheet.getByRole('button', { name: 'Agregar 3 valores' }).click();
     await expect(page.getByLabel('Creatinina: valor')).toHaveValue('1,9');
     // Rango recordado del informe anterior del mismo laboratorio, y valor anterior con su cambio.

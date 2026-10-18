@@ -160,15 +160,17 @@ export function LabValuesEditor({
       const idx = next.findIndex((r) => r.analyte === v.code);
       const base = idx >= 0 ? next[idx] : rowFor(def ?? { code: v.code, name: v.name, unit: v.unit }, { ...ctx });
       const unitChanged = base.unit !== v.unit;
+      const hasRange = v.refLow !== undefined || v.refHigh !== undefined;
       const r = unitChanged ? savedRange(ctx, v.code, v.unit) : undefined;
       const row: ValueRow = {
         ...base,
         value: v.value !== undefined ? num(v.value, 6) : base.value,
         text: v.text ?? base.text,
         unit: v.unit,
-        refLow: v.refLow !== undefined ? num(v.refLow, 6) : unitChanged ? num(r?.low, 6) : base.refLow,
-        refHigh: v.refHigh !== undefined ? num(v.refHigh, 6) : unitChanged ? num(r?.high, 6) : base.refHigh,
-        rangeSaved: v.refLow !== undefined || v.refHigh !== undefined ? false : unitChanged ? !!r : base.rangeSaved,
+        // Si el dictado o el informe trae rango, se usa completo (no se mezcla con un rango guardado).
+        refLow: hasRange ? num(v.refLow, 6) : unitChanged ? num(r?.low, 6) : base.refLow,
+        refHigh: hasRange ? num(v.refHigh, 6) : unitChanged ? num(r?.high, 6) : base.refHigh,
+        rangeSaved: hasRange ? false : unitChanged ? !!r : base.rangeSaved,
         note: [base.note, v.note].filter(Boolean).join('. '),
       };
       if (idx >= 0) next[idx] = row;
@@ -412,8 +414,16 @@ function LabDictationSheet({ rows, onClose, onApply }: { rows: ValueRow[]; onClo
   const [off, setOff] = useState<Record<string, boolean>>({});
   const parsed = useMemo(() => (text.trim() ? parseLabDictation(text) : { values: [], unplaced: [] }), [text]);
   const chosen = parsed.values.filter((v) => !off[v.code]);
-  const fmt = (v: ParsedLabValue) =>
-    `${v.text ?? formatDecimal(v.value, 6)}${v.unit && v.text === undefined ? ` ${v.unit}` : ''}${v.refLow !== undefined ? ` (ref. ${formatDecimal(v.refLow, 6)}–${formatDecimal(v.refHigh, 6)})` : ''}`;
+  const ref = (v: ParsedLabValue) =>
+    v.refLow !== undefined && v.refHigh !== undefined
+      ? ` (ref. ${formatDecimal(v.refLow, 6)}–${formatDecimal(v.refHigh, 6)})`
+      : v.refHigh !== undefined
+        ? ` (ref. hasta ${formatDecimal(v.refHigh, 6)})`
+        : v.refLow !== undefined
+          ? ` (ref. desde ${formatDecimal(v.refLow, 6)})`
+          : '';
+  const fmt = (v: ParsedLabValue) => `${v.text ?? formatDecimal(v.value, 6)}${v.unit && v.text === undefined ? ` ${v.unit}` : ''}${ref(v)}`;
+  const MAX_UNPLACED = 8;
   return (
     <Sheet
       open
@@ -428,10 +438,15 @@ function LabDictationSheet({ rows, onClose, onApply }: { rows: ValueRow[]; onClo
     >
       <div className="space-y-3">
         <Notice tone="neutral" icon={<ClipboardPaste className="size-5" />}>
-          Dicta con el micrófono del teclado o pega el texto del informe. Di el nombre y luego el valor, por ejemplo: «hematocrito 45, hemoglobina 15,2, plaquetas 250 mil, creatinina 1,8 referencia 0,5 a 1,5».
+          <p>
+            <strong>Dictar:</strong> usa el micrófono del teclado y di el nombre y luego el valor, por ejemplo: «hematocrito 45, hemoglobina 15,2, plaquetas 250 mil, creatinina 1,8 referencia 0,5 a 1,5».
+          </p>
+          <p className="mt-1.5">
+            <strong>Informe en foto o PDF:</strong> ábrelo en el iPhone, mantén presionado el texto, toca «Seleccionar todo» y luego «Copiar», y pégalo aquí. Se toman el valor, la unidad y el rango de cada línea.
+          </p>
         </Notice>
         <Field label="Valores dictados o pegados">
-          <TextArea value={text} onChange={(e) => setText(e.target.value)} minRows={5} placeholder="Toca aquí y usa el micrófono del teclado…" />
+          <TextArea value={text} onChange={(e) => setText(e.target.value)} minRows={5} placeholder="Toca aquí para dictar o pegar…" />
         </Field>
         {parsed.values.length > 0 && (
           <div className="card divide-y divide-sand-100 px-3">
@@ -463,10 +478,12 @@ function LabDictationSheet({ rows, onClose, onApply }: { rows: ValueRow[]; onClo
         {parsed.unplaced.length > 0 && (
           <Notice tone="warning" title="No se reconoció">
             <ul className="list-disc pl-5">
-              {parsed.unplaced.map((u, i) => (
+              {parsed.unplaced.slice(0, MAX_UNPLACED).map((u, i) => (
                 <li key={i}>«{u}»</li>
               ))}
             </ul>
+            {parsed.unplaced.length > MAX_UNPLACED && <p className="mt-1">Y {parsed.unplaced.length - MAX_UNPLACED} línea(s) más.</p>}
+            <p className="mt-1">Si es un valor, puedes agregarlo con «Otro valor».</p>
           </Notice>
         )}
       </div>

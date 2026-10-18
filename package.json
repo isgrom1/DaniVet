@@ -1,7 +1,7 @@
 {
   "name": "vetcasa",
   "private": true,
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "VetCasa: aplicación web progresiva (PWA) para la gestión clínica de una médica veterinaria a domicilio. Datos cifrados en el dispositivo.",
   "type": "module",
   "license": "UNLICENSED",

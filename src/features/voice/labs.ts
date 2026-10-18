@@ -22,15 +22,57 @@ export interface ParsedLabValue {
 
 const ALIASES = ANALYTES.flatMap((def) => def.aliases.map((alias) => ({ alias, def }))).sort((a, b) => b.alias.length - a.alias.length);
 
-const LEAD = /^[\s:=]*(?:(?:de|es|en|fue|dio)\s+)?/;
+/**
+ * Lo que puede ir entre el nombre y el valor: dos puntos, puntos de relleno ("Hematocrito ..... 45"),
+ * una sigla entre paréntesis ("ALT (GPT) 85") o palabras de enlace del dictado ("glucosa de 110").
+ */
+// Nunca cruza a otra línea: en un informe pegado, el valor de un examen está en la misma línea que su nombre.
+const LEAD = /^[ \t:=._…]*(?:\([^)\n]{0,30}\)[ \t:=._…]*)?(?:(?:de|es|en|fue|dio)[ \t]+)?/;
 /** Número con puntos de miles ("250.000", "1.250,5") o decimal simple ("12,5", "38.5"). */
-const NUM = /^(\d{1,3}(?:\.\d{3})+(?:,\d+)?|\d+(?:[.,]\d+)?)/;
-const RANGE_NUM = '(\\d+(?:[.,]\\d+)?)';
-const RANGE = new RegExp(
-  `^[\\s,;(]*(?:(?:valor(?:es)? de )?ref(?:erencia)?s?|rango(?: de referencia)?|vr|normal(?:es)?)\\s*:?\\s*(?:de |entre )?${RANGE_NUM}\\s*(?:a|al|-|–|y|hasta)\\s*${RANGE_NUM}\\s*\\)?`,
+const NUM_SRC = '(\\d{1,3}(?:\\.\\d{3})+(?:,\\d+)?|\\d+(?:[.,]\\d+)?)';
+const NUM = new RegExp(`^${NUM_SRC}`);
+const RANGE_SEP = '\\s*(?:-|–|—|a|al|hasta)\\s*';
+/** Rango con palabra clave ("referencia 0,5 a 1,5") o tal como viene en un informe ("0,5 - 1,5", "(37 - 55)"). */
+const RANGE_KEYWORD = new RegExp(
+  `^[\\s,;(\\[]*(?:(?:valor(?:es)? de )?ref(?:erencia)?s?\\.?|rango(?: de referencia)?|intervalo(?: de referencia)?|v\\.?r\\.?|normal(?:es)?)\\s*:?\\s*(?:de |entre )?${NUM_SRC}${RANGE_SEP}${NUM_SRC}\\s*[)\\]]?`,
 );
-const UNIT_WORDS =
-  /^\s*(?:mg\/dl|g\/dl|g\/l|u\/l|ui\/l|mmol\/l|µmol\/l|umol\/l|mEq\/l|meq\/l|fl|pg|µg\/dl|ug\/dl|µg\/l|ug\/l|nmol\/l|x ?10\^?[36]\/µl|miligramos? por decilitro|gramos? por decilitro|unidades? por litro|femtolitros?|picogramos?)(?![a-z])/;
+const RANGE_BARE = new RegExp(`^[\\s,;]*[(\\[]?\\s*${NUM_SRC}${RANGE_SEP}${NUM_SRC}\\s*[)\\]]?`);
+const RANGE_MAX = new RegExp(`^[\\s,;]*[(\\[]?\\s*(?:<=?|≤|menor (?:a|de|que)|hasta|inferior a)\\s*${NUM_SRC}\\s*[)\\]]?`);
+const RANGE_MIN = new RegExp(`^[\\s,;]*[(\\[]?\\s*(?:>=?|≥|mayor (?:a|de|que)|superior a)\\s*${NUM_SRC}\\s*[)\\]]?`);
+/** Marcas de alto o bajo que algunos informes ponen junto al valor ("1,8 H", "1,8 *"). */
+const FLAG = /^\s*(?:\*+|↑|↓|\(?[hl]\)?)(?![a-z0-9])/;
+
+const MU = '[µμu]';
+const VOL = `(?:${MU}l|mm3|mm³)`;
+const POW = (n: string) => `(?:x\\s?)?10\\s?(?:\\^|e)?\\s?(?:${n})`;
+/** Unidades como aparecen en informes o dictados, con su forma de la app. */
+const UNITS: Array<[RegExp, string]> = (
+  [
+    ['%|por ?ciento', '%'],
+    [`(?:${POW('3|³')}|k|mil(?:es)?)\\s?\\/\\s?${VOL}`, '×10³/µL'],
+    [`${POW('9|⁹')}\\s?\\/\\s?l`, '×10³/µL'],
+    [`(?:${POW('6|⁶')}|m|mill(?:ones)?)\\s?\\/\\s?${VOL}`, '×10⁶/µL'],
+    [`${POW('12|¹²')}\\s?\\/\\s?l`, '×10⁶/µL'],
+    [`\\/\\s?${VOL}|por (?:microlitro|milimetro cubico)`, '/µL'],
+    ['mg\\/dl|miligramos? por decilitro', 'mg/dL'],
+    ['g\\/dl|gramos? por decilitro', 'g/dL'],
+    [`(?:${MU}g|mcg)\\/dl`, 'µg/dL'],
+    [`(?:${MU}g|mcg)\\/l`, 'µg/L'],
+    [`${MU}mol\\/l`, 'µmol/L'],
+    ['nmol\\/l', 'nmol/L'],
+    ['mmol\\/l', 'mmol/L'],
+    ['meq\\/l', 'mEq/L'],
+    ['u\\/l|ui\\/l|unidades? por litro', 'U/L'],
+    ['ng\\/ml', 'ng/mL'],
+    ['mg\\/l', 'mg/L'],
+    ['g\\/l', 'g/L'],
+    ['fl|femtolitros?', 'fL'],
+    ['pg|picogramos?', 'pg'],
+  ] as Array<[string, string]>
+).map(([re, unit]) => [new RegExp(`^\\s*(?:${re})(?![a-z0-9])`), unit]);
+
+const COUNT_FACTOR: Record<string, number> = { '/µL': 1, '×10³/µL': 1e3, '×10⁶/µL': 1e6 };
+
 const QUALITATIVE: Array<[RegExp, string]> = [
   [/^(?:negativ[oa]s?|neg|ausentes?|no se detecta)/, 'Negativo'],
   [/^(?:trazas?|indicios)/, 'Trazas'],
@@ -48,6 +90,17 @@ function toNumber(raw: string, def: AnalyteDef): number {
   }
   if (/^\d{1,3}(?:\.\d{3})+(?:,\d+)?$/.test(raw)) return Number(raw.replace(/\./g, '').replace(',', '.'));
   return Number(raw.replace(',', '.'));
+}
+
+const round = (n: number) => Math.round(n * 1e6) / 1e6;
+const hasContent = (s: string) => fold(s).replace(/[^a-z0-9]/g, '').length > 2;
+
+/** Líneas con contenido (lo que no se reconoció se muestra por línea, no pegado a otro valor). */
+function lines(text: string): string[] {
+  return text
+    .split(/\n+/)
+    .map(tidy)
+    .filter(hasContent);
 }
 
 export function parseLabDictation(text: string): { values: ParsedLabValue[]; unplaced: string[] } {
@@ -71,9 +124,7 @@ export function parseLabDictation(text: string): { values: ParsedLabValue[]; unp
   for (const f of found) if (!chosen.length || f.start >= chosen[chosen.length - 1].end) chosen.push(f);
 
   const values: ParsedLabValue[] = [];
-  const unplaced: string[] = [];
-  const lead = tidy(text.slice(0, chosen[0]?.start ?? text.length));
-  if (fold(lead).replace(/[^a-z0-9]/g, '').length > 2) unplaced.push(lead);
+  const unplaced: string[] = lines(text.slice(0, chosen[0]?.start ?? text.length));
 
   chosen.forEach((c, i) => {
     const end = chosen[i + 1]?.start ?? text.length;
@@ -81,7 +132,15 @@ export function parseLabDictation(text: string): { values: ParsedLabValue[]; unp
     const segF = folded.slice(c.end, end);
     const segT = text.slice(c.end, end);
     let pos = LEAD.exec(segF)![0].length;
-    const out: ParsedLabValue = { code: def.code, name: def.name, unit: def.unit, source: tidy(text.slice(c.start, end)) };
+    // La frase de origen y la nota llegan solo hasta el fin de la línea; lo que sigue en otras líneas se informa aparte.
+    const nl = segT.indexOf('\n', pos);
+    const lineEnd = nl >= 0 ? nl : segT.length;
+    const out: ParsedLabValue = { code: def.code, name: def.name, unit: def.unit, source: tidy(text.slice(c.start, c.end + lineEnd)) };
+    const skip = (re: RegExp) => {
+      const m = re.exec(segF.slice(pos, lineEnd));
+      if (m) pos += m[0].length;
+      return m;
+    };
     if (def.qualitative) {
       const q = QUALITATIVE.map(([re, label]) => ({ m: re.exec(segF.slice(pos)), label })).find((x) => x.m);
       if (!q?.m) return;
@@ -99,49 +158,56 @@ export function parseLabDictation(text: string): { values: ParsedLabValue[]; unp
         value = w.value;
         pos += w.length;
       }
-      const mult = /^\s*(mil(?:es)?|millones?)(?![a-z])/.exec(segF.slice(pos));
-      if (mult) {
-        value *= mult[1].startsWith('mil') && !mult[1].startsWith('millon') ? 1e3 : 1e6;
-        pos += mult[0].length;
-      }
-      const pct = /^\s*(?:%|por ?ciento)/.exec(segF.slice(pos));
-      if (pct) {
-        out.unit = '%';
-        pos += pct[0].length;
+      const mult = skip(/^\s*(mil(?:es)?|millones?)(?![a-z])(?!\s?\/)/);
+      if (mult) value *= mult[1].startsWith('millon') ? 1e6 : 1e3;
+      skip(FLAG);
+      const readUnit = () => {
+        for (const [re, unit] of UNITS) if (skip(re)) return unit;
+        return undefined;
+      };
+      let unit = readUnit();
+      skip(FLAG);
+      // Rango: con palabra clave, tal como viene en un informe, o solo máximo / mínimo.
+      let low: number | undefined;
+      let high: number | undefined;
+      const r = skip(RANGE_KEYWORD) ?? skip(RANGE_BARE);
+      if (r) {
+        low = toNumber(r[1], def);
+        high = toNumber(r[2], def);
       } else {
-        const perUl = /^\s*(?:\/ ?(?:µl|ul|mm3)|por (?:microlitro|milimetro cubico))/.exec(segF.slice(pos));
-        if (perUl) {
-          out.unit = '/µL';
-          pos += perUl[0].length;
-        }
-        const unitWord = UNIT_WORDS.exec(segF.slice(pos));
-        if (unitWord) pos += unitWord[0].length;
+        const mx = skip(RANGE_MAX);
+        const mn = mx ? null : skip(RANGE_MIN);
+        if (mx) high = toNumber(mx[1], def);
+        if (mn) low = toNumber(mn[1], def);
       }
-      // Recuentos dictados como número absoluto ("plaquetas 250.000", "250 mil") → unidad del catálogo.
-      if (out.unit === '×10³/µL' && value >= 1000) {
-        value /= 1e3;
-        out.warning = 'Dictado como recuento absoluto: se registra en ×10³/µL.';
-      } else if (out.unit === '×10⁶/µL' && value >= 1e5) {
-        value /= 1e6;
-        out.warning = 'Dictado como recuento absoluto: se registra en ×10⁶/µL.';
-      } else if (out.unit === '/µL' && def.unit === '×10³/µL') {
-        value /= 1e3;
+      // Algunos informes ponen la unidad después del rango.
+      if (!unit && (low !== undefined || high !== undefined)) unit = readUnit();
+      skip(FLAG);
+
+      // Recuentos: se expresan en la unidad del catálogo (los rangos con el mismo factor).
+      let factor = 1;
+      const catalogCount = COUNT_FACTOR[def.unit];
+      if (unit && unit in COUNT_FACTOR && catalogCount) {
+        factor = COUNT_FACTOR[unit] / catalogCount;
+        if (factor !== 1) out.warning = `Informado en ${unit}: se registra en ${def.unit}.`;
         out.unit = def.unit;
+      } else if (unit) {
+        out.unit = unit;
+      } else if (def.unit === '×10³/µL' && value >= 1000) {
+        factor = 1e-3;
+        out.warning = 'Recuento absoluto: se registra en ×10³/µL.';
+      } else if (def.unit === '×10⁶/µL' && value >= 1e5) {
+        factor = 1e-6;
+        out.warning = 'Recuento absoluto: se registra en ×10⁶/µL.';
       }
-      out.value = Math.round(value * 1e6) / 1e6;
+      out.value = round(value * factor);
+      if (low !== undefined && high !== undefined && low > high) [low, high] = [undefined, undefined];
+      if (low !== undefined) out.refLow = round(low * factor);
+      if (high !== undefined) out.refHigh = round(high * factor);
     }
-    const r = RANGE.exec(segF.slice(pos));
-    if (r) {
-      const low = Number(r[1].replace(',', '.'));
-      const high = Number(r[2].replace(',', '.'));
-      if (low <= high) {
-        out.refLow = low;
-        out.refHigh = high;
-      }
-      pos += r[0].length;
-    }
-    const note = tidy(segT.slice(pos).replace(/^[\s,;)]*(?:y|e)?\s+/i, ''));
-    if (fold(note).replace(/[^a-z0-9]/g, '').length > 2) out.note = note;
+    const note = tidy(segT.slice(pos, lineEnd).replace(/^[\s,;)]*(?:y|e)?\s+/i, ''));
+    if (hasContent(note)) out.note = note;
+    unplaced.push(...lines(segT.slice(lineEnd)));
     values.push(out);
   });
   return { values, unplaced };
