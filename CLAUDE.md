@@ -45,10 +45,12 @@ Para deshacer una versión: `git revert` del commit, subir la versión (la app c
 
 - `src/data/`: modelo (`schema.ts`), relaciones, repositorio cifrado (`repo.ts`), sesión y bóveda, migraciones.
 - `src/features/<módulo>/`: pantallas (agenda, consultations, prescriptions, preventive, finance, backup, settings, more…).
+- `src/features/voice/`: dictado (interpreta el texto que escribe el micrófono del teclado; consulta y valores de exámenes).
+- `src/features/exams/`: exámenes, catálogo de valores sin rangos propios (`analytes.ts`), evolución (`trends.ts`, `LabTrends.tsx`, `LabChart.tsx`).
 - `src/lib/`: cifrado, IndexedDB, fechas, RUT, teléfonos, compartir archivos, service worker (`sw.ts`).
 - `src/pdf/`: documentos PDF (pdf-lib, se carga solo al generar).
 - `src/changelog.ts`: novedades por versión.
-- `e2e/acceptance.spec.ts`: flujo de aceptación completo en tres tamaños de iPhone emulados.
+- `e2e/acceptance.spec.ts`: flujo de aceptación completo en tres tamaños de iPhone emulados; `e2e/voice-labs.spec.ts`: dictado y valores de exámenes.
 
 ## Actualizaciones (cómo llegan a cada teléfono)
 

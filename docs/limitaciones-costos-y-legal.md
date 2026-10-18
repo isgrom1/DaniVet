@@ -24,6 +24,8 @@
 - **Cobros:** los comprobantes son internos, **no son boletas ni facturas**; no hay integración con el SII ni pasarela de pago.
 - **PDF:** usa fuentes estándar; los caracteres que no admiten (emojis y algunos símbolos) se reemplazan.
 - No se conecta al Registro Nacional de Mascotas (solo guarda el número de microchip).
+- **Dictado:** usa el micrófono del teclado del iPhone. La app entiende frases que nombran el dato antes del valor («peso 12,4 kilos», «diagnóstico presuntivo…»); un relato libre sin esas palabras queda como texto sin ubicar, que se puede agregar a mano. La interpretación es por reglas en el teléfono, no por inteligencia artificial: no se probó con dictados reales de un iPhone (el entorno no tiene Safari ni micrófono), así que conviene probarla en la primera consulta y avisar qué frases no reconoce.
+- **Valores de exámenes:** la app no trae rangos de referencia (usa los del informe de cada laboratorio) y no convierte unidades distintas de los recuentos (/µL, ×10³/µL); un mismo valor informado en otra unidad aparece en otra fila.
 
 ## Costos
 
@@ -46,6 +48,7 @@
 | Notificaciones push | Servidor de bajo costo o gratuito con límites, más desarrollo | Si los recordatorios dentro de la app no bastan. |
 | App nativa en App Store | US$99 al año (Apple Developer Program) | Solo si se necesitan funciones nativas. |
 | Boletas de honorarios | El SII ofrece emisión gratuita en sii.cl | Se emiten fuera de la app. |
+| Interpretación del dictado con IA en la nube | Costo por uso del proveedor, más un servidor intermedio | Si las reglas actuales no bastan. Implica enviar texto clínico a un tercero (consentimiento y contrato de tratamiento de datos). |
 
 Los precios de terceros son referenciales: verifícalos antes de contratar. No acepté compromisos de pago ni contraté servicios.
 

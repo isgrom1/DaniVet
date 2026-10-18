@@ -74,11 +74,55 @@ export function setPath<T>(obj: T, path: string, value: unknown): T {
   return clone as T;
 }
 
+/**
+ * Al editar un dato dictado, la profesional lo está revisando: queda como revisado.
+ * (Los datos copiados o de plantilla siguen exigiendo "Marcar revisado".)
+ */
+export function reviewDictatedOnEdit(c: Consultation, path: string): Consultation {
+  const hit = (p: Consultation['provenance'][number]) => p.source === 'dictated' && !p.reviewed && (p.path === path || path.startsWith(`${p.path}.`));
+  if (!c.provenance.some(hit)) return c;
+  return { ...c, provenance: c.provenance.map((p) => (hit(p) ? { ...p, reviewed: true } : p)) };
+}
+
+/** Quita la marca de origen de un diagnóstico o tratamiento eliminado. */
+export function dropProvenance(c: Consultation, path: string): Consultation {
+  return c.provenance.some((p) => p.path === path) ? { ...c, provenance: c.provenance.filter((p) => p.path !== path) } : c;
+}
+
+export interface MissingItem {
+  label: string;
+  /** Sección del editor donde se completa. */
+  section: 'reason' | 'exam' | 'assessment' | 'plan';
+}
+
+/**
+ * Datos importantes que aún no se registran (aviso, no impide finalizar).
+ * Solo se informa lo que falta: nunca se completa nada por defecto.
+ */
+export function missingImportant(c: Consultation, diagnoses: Array<{ name: string }>, treatments: Array<{ name: string }>): MissingItem[] {
+  const out: MissingItem[] = [];
+  const e = c.exam;
+  if (!c.reason.main?.trim()) out.push({ label: 'Motivo de consulta', section: 'reason' });
+  if (e.weightKg === undefined) out.push({ label: 'Peso', section: 'exam' });
+  if (e.temperatureC === undefined) out.push({ label: 'Temperatura', section: 'exam' });
+  if (e.heartRateBpm === undefined) out.push({ label: 'Frecuencia cardíaca', section: 'exam' });
+  if (e.respRateRpm === undefined) out.push({ label: 'Frecuencia respiratoria', section: 'exam' });
+  if (e.mucous.status === 'not_evaluated') out.push({ label: 'Mucosas', section: 'exam' });
+  if (e.crtSec === undefined) out.push({ label: 'Llenado capilar', section: 'exam' });
+  if (e.hydration.status === 'not_evaluated') out.push({ label: 'Hidratación', section: 'exam' });
+  if (e.bcs.value === undefined) out.push({ label: 'Condición corporal', section: 'exam' });
+  if (!diagnoses.some((d) => d.name.trim())) out.push({ label: 'Diagnóstico', section: 'assessment' });
+  if (!treatments.some((t) => t.name.trim()) && !c.plan.homeCare?.trim() && !c.plan.ownerRecommendations?.trim()) {
+    out.push({ label: 'Tratamiento o indicaciones', section: 'plan' });
+  }
+  return out;
+}
+
 /** Requisitos mínimos para finalizar una consulta. */
 export function finalizeBlockers(c: Consultation): string[] {
   const out: string[] = [];
   if (!c.reason.main?.trim()) out.push('Falta el motivo principal de la consulta.');
   const pending = c.provenance.filter((p) => !p.reviewed);
-  if (pending.length) out.push(`Hay ${pending.length} campo(s) copiado(s) o de plantilla sin revisar.`);
+  if (pending.length) out.push(`Hay ${pending.length} dato(s) copiado(s), de plantilla o dictado(s) sin revisar.`);
   return out;
 }

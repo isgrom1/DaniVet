@@ -35,6 +35,14 @@ Después, en **Más › Perfil profesional** completa tu RUT, teléfono, logo y 
 
 **Atender.** En la visita toca **Iniciar consulta** y elige el paciente. La consulta se guarda sola mientras escribes (aunque no haya señal). Completa solo lo que examinaste: **la app nunca marca valores como normales por su cuenta**. Si copias algo de una consulta anterior o de una plantilla, queda marcado y debes revisarlo antes de finalizar; el examen, el diagnóstico y el tratamiento nunca se copian.
 
+**Dictar la consulta.** En la consulta toca **Dictar la consulta**, toca el cuadro de texto y luego el **micrófono del teclado** del iPhone. Di el nombre de cada dato antes del valor, con pausas, por ejemplo: *«Motivo de consulta vómitos desde ayer. Peso 12,4 kilos. Temperatura 39,2. Mucosas rosadas. Abdomen con dolor a la palpación. Resto del examen normal. Diagnóstico presuntivo gastroenteritis. Tratamiento omeprazol 1 mg por kilo oral cada 12 horas por 7 días. Control en 7 días.»* Debajo aparece qué entendió la app y dónde irá cada dato: desmarca lo que no corresponda (o corrige el texto) y toca **Agregar a la ficha**. Lo dictado queda marcado **«Dictado: revisar»**: al corregir un dato queda revisado, y antes de finalizar puedes marcar el resto con **Marcar lo dictado como revisado**. Lo que la app no logra ubicar se avisa y queda guardado en el **texto dictado** de la consulta. La app nunca agrega valores que no dijiste ni sugiere dosis. Si el teclado no muestra el micrófono: *Ajustes del iPhone › General › Teclado › Activar dictado*.
+
+**Datos importantes sin registrar.** Mientras completas la consulta, un recuadro te muestra lo que aún falta (motivo, peso, temperatura, frecuencias cardíaca y respiratoria, mucosas, llenado capilar, hidratación, condición corporal, diagnóstico y tratamiento o indicaciones); toca uno para ir a su sección. Es un aviso: puedes finalizar igual, y al finalizar se recuerda lo que faltó.
+
+**Valores de exámenes.** Al registrar o abrir un examen, en **Valores del examen** toca el panel (Hemograma, Bioquímica, Electrolitos, Orina o Endocrino) y escribe los valores del informe con el **rango de referencia que informa el laboratorio** (la app no trae rangos propios). También puedes **Dictar o pegar** los valores: *«hematocrito 45, plaquetas 250 mil, creatinina 1,8 referencia 0,5 a 1,5»*. Cada valor muestra **Alto** o **Bajo** según ese rango, el valor anterior del paciente y la diferencia. La app recuerda los rangos de cada laboratorio para la próxima vez (revísalos: un laboratorio puede cambiarlos).
+
+**Evolución de valores.** En la ficha del paciente, pestaña **Exámenes › Evolución de valores**, verás una tabla con cada valor en sus distintos exámenes. Puedes filtrar por **examen** (lo compara con el anterior y muestra el cambio), por panel, buscar un valor por su nombre o ver **solo los fuera de rango**. Toca un valor para ver su **gráfico** en el tiempo, con el rango de referencia y todos sus resultados.
+
 **Dosis.** En el tratamiento o la receta, el botón **Calcular** abre la calculadora: tú ingresas la dosis según tu criterio y la concentración del producto; la app calcula, muestra los pasos, revisa que las unidades sean compatibles y no sugiere dosis. Para usar el resultado debes marcar que lo revisaste.
 
 **Registros de la atención.** Al final de la consulta (sección 6) registras vacunas, desparasitaciones, recetas, documentos (consentimientos con firma dibujada) y el cobro, todos vinculados a la consulta.
@@ -84,3 +92,5 @@ El archivo `.dapp` está cifrado: sin tu contraseña o tu clave de recuperación
 **¿Qué pasa si borro la app del inicio?** iOS borra sus datos. Antes de borrarla, crea y guarda un respaldo.
 
 **¿Alguien más puede ver mis datos?** No. Están cifrados con tu contraseña en tu teléfono y no se envían a ningún servidor.
+
+**¿Quién escucha el dictado?** La voz la transcribe el **teclado del iPhone** (Apple): según el modelo de iPhone y el idioma, Apple la procesa en el propio teléfono o en sus servidores, igual que al dictar un mensaje. DApp solo recibe el texto, lo interpreta en el teléfono y lo guarda cifrado con la consulta; no lo envía a ningún lugar.

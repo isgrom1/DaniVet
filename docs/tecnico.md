@@ -38,6 +38,8 @@ src/
     store.ts, hooks.ts           Estado en memoria y selectores para React
     defaults.ts, labels.ts       Valores iniciales (especies, plantillas, medios de pago) y textos
   features/<módulo>/             Pantallas y lógica de cada módulo (agenda, consultations, prescriptions…)
+  features/voice/                Dictado: interpretación del texto dictado (consulta y valores de exámenes)
+  features/exams/                Exámenes, catálogo de valores, evolución (tabla y gráfico)
   lib/                           Cifrado, IndexedDB, fechas, números, RUT, teléfonos, CSV, compartir archivos
   pdf/                           Generación de PDF (pdf-lib, carga diferida)
   test/                          Configuración y utilidades de pruebas unitarias
@@ -68,7 +70,16 @@ Reglas que impone la capa de datos (`repo.ts`), no solo la interfaz:
 - **Lotes atómicos:** varias escrituras se confirman juntas o ninguna (una transacción de IndexedDB).
 - **Conflictos:** si el registro cambió desde que se abrió el formulario (otra pestaña), se rechaza la escritura en vez de sobrescribir.
 - **Historial:** las tablas clínicas, de personas y finanzas registran en `auditLog` quién/cuándo/qué cambió (cifrado como todo lo demás).
-- **Procedencia:** los campos de la consulta llevan marca de origen (profesional, tutor, documento, calculado, copiado, plantilla); lo copiado o de plantilla debe revisarse antes de finalizar.
+- **Procedencia:** los campos de la consulta llevan marca de origen (profesional, tutor, documento, calculado, copiado, plantilla, dictado); lo copiado, de plantilla o dictado debe revisarse antes de finalizar.
+
+Campos agregados en la versión 1.2.0 (todos opcionales, por eso no requirieron migración ni subir `DATA_VERSION`):
+
+| Campo | Contenido |
+| --- | --- |
+| `consultations.dictations[]` | Texto dictado tal como llegó (`{ id, at, text }`), para trazabilidad. |
+| `consultations.provenance[].source = 'dictated'` | Dato agregado desde el dictado; `fromId` apunta al dictado. Los diagnósticos y tratamientos dictados usan la ruta `diagnoses.<id>` / `treatments.<id>`. |
+| `exams.values[]` | Valores del examen: `analyte` (código del catálogo o `custom:<nombre>`), `name`, `value` (número) o `text` (resultado cualitativo), `unit`, `refLow`/`refHigh` (rango **informado por el laboratorio**), `note`. |
+| `settings.labRanges` | Rangos recordados por `especie|laboratorio|analito` (se guardan al registrar un examen y se proponen en el siguiente del mismo laboratorio). |
 
 ## 4. Migraciones
 
@@ -117,6 +128,15 @@ Para publicar en otro hosting estático (Netlify, Cloudflare Pages, un dominio p
 - **Sugerencias desde la app:** *Más › Sugerir un cambio o reportar un problema* arma un mensaje (texto de la usuaria + versión + tipo de equipo, sin datos clínicos) y lo abre en WhatsApp o en el correo para elegir el destinatario.
 - **Revisión periódica sugerida:** cambios normativos (Ley 21.719, recetas SAG), compatibilidad con la última versión de iOS y que el flujo de publicación siga en verde.
 
+### Dictado (voz a ficha)
+
+- **Captura:** el micrófono del **teclado del iPhone** escribe en un cuadro de texto (`src/features/voice/DictationSheet.tsx`). No se usa la API de reconocimiento de voz del navegador: en las apps web instaladas en la pantalla de inicio de iOS no es confiable ([WebKit 225298](https://bugs.webkit.org/show_bug.cgi?id=225298), [foros de Apple](https://developer.apple.com/forums/thread/748048)). Según el modelo e idioma, Apple procesa el dictado en el teléfono o en sus servidores ([soporte de Apple](https://support.apple.com/es-us/HT208343)); la app solo recibe el texto.
+- **Interpretación local y determinista** (`src/features/voice/text.ts`, `consultation.ts`): se pliega el texto (minúsculas, sin tildes, mismo largo), se buscan palabras clave por campo y se corta el texto entre ellas. Las palabras ambiguas ("abdomen", "dieta", "tratamiento") solo cuentan al comenzar una frase, si van seguidas de ":"/"normal", o a mitad de frase cuando el contexto lo indica (p. ej. un sistema después de otro dato del examen y seguido de "con", "sin", "normal"). Los números aceptan coma o punto, palabras ("treinta y ocho coma cinco"), gramos y "kilos y gramos"; los valores imposibles se proponen desmarcados. Los tratamientos se separan por frase o por medicamento (un nombre nuevo seguido de otra dosis) y conservan dosis, vía, frecuencia y duración **tal como se dictaron**: no se sugiere ni completa ninguna dosis.
+- **Aplicación** (`src/features/voice/apply.ts`): solo lo marcado en la vista previa; cada dato queda con procedencia `dictated` sin revisar (editarlo lo deja revisado; `reviewDictatedOnEdit` en `consultations/model.ts`). "Resto normal" solo afecta a los sistemas que siguen "No evaluado" y que no se dictaron. Diagnósticos y tratamientos ya existentes no se duplican. Lo no ubicado queda en `dictations`.
+- **Datos importantes sin registrar:** `missingImportant()` en `consultations/model.ts` (aviso, no bloquea la finalización).
+- **Valores de exámenes:** catálogo en `src/features/exams/analytes.ts` (nombres, unidades habituales, sinónimos; **sin rangos**), dictado en `src/features/voice/labs.ts` (miles chilenos "250.000", "250 mil", "%", rangos "referencia 0,5 a 1,5", tira de orina "dos cruces"), formulario en `LabValuesEditor.tsx`, evolución en `trends.ts` (filas por valor y grupo de unidad; recuentos /µL ↔ ×10³/µL se convierten, % va en otra fila; la fecha de cada examen es la toma de muestra o, si falta, la solicitud), tabla y filtros en `LabTrends.tsx`, gráfico en `LabChart.tsx` (colores validados por contraste y daltonismo: serie `#00876c`, fuera de rango `#b45309` con forma ▲/▼ además del color; la lista de valores es su equivalente accesible).
+- **Mejora posible (requiere autorización):** interpretar el dictado con un modelo de lenguaje en la nube daría más flexibilidad, pero exige un servidor intermedio (la app no puede guardar claves), un costo por uso y enviar texto clínico a un tercero (consentimiento y contrato de tratamiento de datos).
+
 ### Cambiar el nombre de la app
 
 El nombre visible sale de **una sola línea** de `vite.config.ts`:
@@ -138,7 +158,7 @@ Al cambiarla y publicar (push a la rama principal), cambian: el nombre bajo el �
 npm ci
 npm run dev           # http://localhost:5173
 npm run typecheck
-npm test              # Vitest + fake-indexeddb (47 pruebas)
+npm test              # Vitest + fake-indexeddb (69 pruebas)
 npm run build && npm run test:e2e        # Playwright con emulación de iPhone (requiere Chromium)
 E2E_BASE_URL=https://isgrom1.github.io/DaniVet/ npm run test:e2e   # contra la URL publicada
 ```

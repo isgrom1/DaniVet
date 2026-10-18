@@ -11,7 +11,7 @@ import {
   type SelectHTMLAttributes,
   type TextareaHTMLAttributes,
 } from 'react';
-import { Calculator, CircleAlert, ClipboardCheck, Copy, FileText, MessageCircle, Search, Sparkles, UserRound, X } from 'lucide-react';
+import { Calculator, CircleAlert, ClipboardCheck, Copy, FileText, MessageCircle, Mic, Search, Sparkles, UserRound, X } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import type { Provenance } from '@/data/schema';
 
@@ -347,6 +347,7 @@ const PROVENANCE: Record<Provenance | 'pending', { label: string; cls: string; i
   calculated: { label: 'Calculado por la app', cls: 'bg-amber-50 text-amber-900', icon: <Calculator className="size-3" /> },
   copied: { label: 'Copiado: revisar', cls: 'bg-orange-50 text-orange-900', icon: <Copy className="size-3" /> },
   template: { label: 'De plantilla: revisar', cls: 'bg-orange-50 text-orange-900', icon: <Sparkles className="size-3" /> },
+  dictated: { label: 'Dictado: revisar', cls: 'bg-orange-50 text-orange-900', icon: <Mic className="size-3" /> },
   pending: { label: 'Por confirmar', cls: 'bg-red-50 text-red-800', icon: <UserRound className="size-3" /> },
 };
 

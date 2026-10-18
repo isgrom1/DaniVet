@@ -176,6 +176,19 @@ function ConsultationView({ c }: { c: Consultation }) {
 
         <Section title="Trazabilidad">
           <Card className="space-y-2">
+            {(c.dictations?.length ?? 0) > 0 && (
+              <details>
+                <summary className="flex min-h-11 cursor-pointer items-center text-[15px] font-semibold text-ink-800">Texto dictado ({c.dictations!.length})</summary>
+                <ul className="space-y-2 pb-2">
+                  {c.dictations!.map((d) => (
+                    <li key={d.id} className="text-sm">
+                      <span className="font-semibold text-ink-600">{formatDateTime(d.at)}</span>
+                      <p className="whitespace-pre-wrap text-ink-800">{d.text}</p>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
             {versions.length === 0 ? (
               <p className="text-sm text-ink-500">Sin enmiendas: esta es la versión original.</p>
             ) : (

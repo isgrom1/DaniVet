@@ -43,13 +43,15 @@ Archivo `e2e/acceptance.spec.ts`. Se ejecuta en Chromium emulando **iPhone SE (3
 19. **Restaurar el respaldo en otro teléfono** (contexto vacío): aparecen pacientes, tutora, consulta finalizada y receta.
 20. **Sin conexión**: con la red cortada la app abre desde el service worker, se desbloquea, muestra el aviso "Sin conexión", registra un peso y lo conserva tras recargar.
 
+Además, `e2e/voice-labs.spec.ts` (**dictado y valores de exámenes**, versión 1.2.0) en los tres iPhone: avisa los datos importantes que faltan; dicta una consulta completa (el texto llega al cuadro como lo escribe el micrófono del teclado), revisa la vista previa (cada dato con su frase de origen, lo no reconocido, lo que aún faltaría), desmarca un dato y agrega el resto; comprueba cada campo en la ficha, la marca «Dictado: revisar», que corregir un dato lo deja revisado, que no se puede finalizar sin revisar y que el texto dictado queda en la consulta finalizada. Luego registra dos exámenes de bioquímica (uno escrito, con los campos de referencia vacíos al comenzar, y otro dictado), verifica el rango recordado del mismo laboratorio, el valor anterior con su diferencia y la marca «Alto»; y en la ficha del paciente la tabla de evolución, los filtros (fuera de rango, examen específico comparado con el anterior, búsqueda por sigla) y el gráfico de un valor.
+
 Además, `e2e/update.spec.ts` (**actualización real**, en GitHub Actions en cada cambio) instala la app, compila una versión nueva mientras está abierta y comprueba: con la app bloqueada, la versión nueva se instala sola al abrirla (servida por la app instalada, no por la red); en uso, aparece el aviso sin interrumpir y la versión se instala al bloquear; los datos se conservan; y las novedades se muestran una sola vez.
 
 Además, `la app se puede instalar` comprueba el manifiesto (`standalone`, `es-CL`, ícono 512×512), el ícono para iPhone, las etiquetas para pantalla de inicio y la política de seguridad de contenidos.
 
 Durante todo el flujo se registran los errores de JavaScript de la página: **ninguno**.
 
-## Pruebas unitarias (47)
+## Pruebas unitarias (69)
 
 | Archivo | Pruebas | Qué verifica |
 | --- | --- | --- |
@@ -61,6 +63,8 @@ Durante todo el flujo se registran los errores de JavaScript de la página: **ni
 | `src/pdf/pdf.test.ts` | 3 | Receta, certificado de vacunación y comprobante interno (texto extraído del PDF); reemplazo de caracteres no admitidos |
 | `src/changelog.test.ts` | 5 | Cada versión tiene sus novedades (coincide con `package.json`), comparación de versiones, novedades desde la última versión vista, mensaje de sugerencia sin datos personales |
 | `src/lib/utils.test.ts` | 9 | Teléfonos chilenos, RUT (con K), números y montos, fechas locales y edades, búsqueda sin tildes, CSV seguro, clave de recuperación y contraseñas |
+| `src/features/voice/voice.test.ts` | 11 | Dictado de la consulta: números con cifras o palabras, palabras clave que no cortan frases, reparto de un dictado completo en sus campos, nada inventado (valores no dictados ausentes, imposibles desmarcados, ningún sistema normal sin dictarlo), dictado sin puntuación con varios medicamentos, gramos, soplos y escala de condición corporal; aplicación con marca «dictado», transcripción guardada, "resto normal" sin pisar hallazgos, finalización bloqueada hasta revisar, sin duplicar diagnósticos ni tratamientos |
+| `src/features/exams/labs.test.ts` | 11 | Catálogo sin rangos propios, alto/bajo solo con el rango informado, conversión de recuentos, búsqueda; dictado de valores (miles chilenos, "250 mil", %, rangos, tira de orina, números en palabras); filas del formulario y rangos recordados por laboratorio; tabla de evolución, variación, valor anterior y rangos en la unidad de la fila |
 
 ## Lo que no se pudo probar
 

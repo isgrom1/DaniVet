@@ -12,6 +12,16 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.2.0',
+    date: '2026-10-18',
+    items: [
+      'Dictado de la consulta: toca «Dictar la consulta» y habla con el micrófono del teclado. La app ubica cada dato en la ficha (motivo, examen físico, diagnóstico, tratamiento y control); tú eliges qué agregar y lo dictado queda marcado para revisar.',
+      'Aviso de datos importantes sin registrar (peso, temperatura, mucosas, diagnóstico y otros) mientras completas la consulta y al finalizarla.',
+      'Valores de exámenes: ingresa los valores del informe (hemograma, bioquímica, electrolitos, orina y endocrino), escribiéndolos o dictándolos, con el rango que informa el laboratorio.',
+      'En la ficha del paciente, Exámenes › Evolución de valores: tabla para comparar exámenes, filtros y un gráfico de cada valor.',
+    ],
+  },
+  {
     version: '1.1.0',
     date: '2026-10-11',
     items: [

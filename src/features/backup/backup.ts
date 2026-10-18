@@ -8,6 +8,7 @@ import { currentDataVersion, DATA_VERSION_KEY } from '@/data/migrations';
 import { APP_SLUG, APP_VERSION, DEFAULT_APP_NAME } from '@/lib/platform';
 import { allOf, useDataStore } from '@/data/store';
 import { toCSV } from '@/lib/csv';
+import { EXAM_TYPE } from '@/data/labels';
 import { readBlob } from '@/features/attachments/attachments';
 
 /**
@@ -267,6 +268,7 @@ Relaciones (claves foráneas)
 - consultations.patientId -> patients.id ; consultations.tutorId -> tutors.id ; consultations.appointmentId -> appointments.id
 - diagnoses.consultationId / treatments.consultationId -> consultations.id
 - prescriptions, vaccinations, dewormings, exams, documents, weights: patientId -> patients.id (y consultationId cuando corresponde)
+- exams.values[]: valores del examen (analyte = código del valor, refLow/refHigh = rango informado por el laboratorio)
 - attachments.blobId -> archivo en adjuntos/ ; attachments.patientId / consultationId / examId / documentId
 - charges.tutorId -> tutors.id ; payments.chargeId -> charges.id
 - inventoryLots.itemId / inventoryMovements.itemId -> inventoryItems.id
@@ -325,6 +327,14 @@ export async function exportOpenData(opts: { includeAttachments: boolean }): Pro
   );
   files['csv/recetas.csv'] = strToU8(
     toCSV(['id', 'Fecha', 'Paciente', 'Estado', 'Medicamentos'], [...t.prescriptions.values()].map((r) => [r.id, r.date, r.patientSnap.name, r.status, r.items.map((i) => `${i.medicationName}: ${i.dose}`).join(' | ')])),
+  );
+  files['csv/valores-examenes.csv'] = strToU8(
+    toCSV(
+      ['Examen (id)', 'Fecha', 'Paciente', 'Examen', 'Laboratorio', 'Valor', 'Resultado', 'Unidad', 'Ref. mínima', 'Ref. máxima', 'Nota'],
+      [...t.exams.values()].flatMap((e) =>
+        (e.values ?? []).map((v) => [e.id, e.sampleDate ?? e.requestedAt, pname(e.patientId), e.name ?? EXAM_TYPE[e.type], e.lab, v.name, v.value ?? v.text, v.unit, v.refLow, v.refHigh, v.note]),
+      ),
+    ),
   );
   if (opts.includeAttachments) {
     for (const a of t.attachments.values()) {

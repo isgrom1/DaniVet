@@ -32,7 +32,7 @@ const base = {
 };
 
 /** Origen de un dato: distingue lo registrado por la profesional, lo informado por el tutor, lo calculado, etc. */
-export const provenance = z.enum(['professional', 'owner', 'document', 'calculated', 'copied', 'template']);
+export const provenance = z.enum(['professional', 'owner', 'document', 'calculated', 'copied', 'template', 'dictated']);
 export type Provenance = z.infer<typeof provenance>;
 
 export const findingStatus = z.enum(['not_evaluated', 'normal', 'abnormal']);
@@ -88,6 +88,13 @@ export const settingsSchema = z.object({
   kmRateCLP: z.number().int().min(0).optional(),
   calendar: z.object({ includePatientName: z.boolean(), includeAddress: z.boolean() }),
   backup: z.object({ reminderDays: z.number().int().min(1).max(90) }),
+  /**
+   * Rangos de referencia de exámenes que la profesional copió de un informe y pidió recordar,
+   * por especie, laboratorio y analito (clave "especie|laboratorio|analito"). La app no trae rangos propios.
+   */
+  labRanges: z
+    .record(z.string().max(300), z.object({ low: z.number().optional(), high: z.number().optional(), unit: z.string().max(40).optional() }))
+    .optional(),
 });
 export type Settings = z.infer<typeof settingsSchema>;
 
@@ -435,10 +442,12 @@ export const consultationSchema = z.object({
       nextReview: isoDate.optional(),
     })
     .optional(),
-  /** Campos reutilizados de otra consulta o de una plantilla, con su estado de revisión. */
+  /** Campos reutilizados de otra consulta, de una plantilla o dictados por voz, con su estado de revisión. */
   provenance: z.array(
-    z.object({ path: z.string(), source: z.enum(['copied', 'template']), fromId: optRef, reviewed: z.boolean() }),
+    z.object({ path: z.string(), source: z.enum(['copied', 'template', 'dictated']), fromId: optRef, reviewed: z.boolean() }),
   ),
+  /** Transcripciones dictadas (texto tal como se dictó), para trazabilidad. */
+  dictations: z.array(z.object({ id: ref, at: isoDateTime, text: z.string().max(20000) })).optional(),
 });
 export type Consultation = z.infer<typeof consultationSchema>;
 
@@ -639,6 +648,22 @@ export const examType = z.enum([
 export const examStatus = z.enum(['requested', 'sampled', 'sent', 'received', 'reviewed', 'cancelled']);
 export type ExamStatus = z.infer<typeof examStatus>;
 
+/** Valor de un examen. El rango es el informado por el laboratorio: la app no inventa rangos. */
+export const labValueSchema = z.object({
+  id: ref,
+  /** Código del catálogo (src/features/exams/analytes.ts) o "custom:<nombre>" para valores propios. */
+  analyte: z.string().min(1).max(120),
+  name: z.string().min(1).max(120),
+  value: z.number().optional(),
+  /** Resultado cualitativo (negativo, trazas, ++…). */
+  text: z.string().max(200).optional(),
+  unit: z.string().max(40).optional(),
+  refLow: z.number().optional(),
+  refHigh: z.number().optional(),
+  note: z.string().max(500).optional(),
+});
+export type LabValue = z.infer<typeof labValueSchema>;
+
 export const examSchema = z.object({
   ...base,
   patientId: ref,
@@ -655,6 +680,8 @@ export const examSchema = z.object({
   interpretation: text,
   followUpAction: text,
   reviewedAt: isoDateTime.optional(),
+  /** Valores medidos (para comparar su evolución entre exámenes). */
+  values: z.array(labValueSchema).optional(),
 });
 export type Exam = z.infer<typeof examSchema>;
 

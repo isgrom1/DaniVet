@@ -20,6 +20,7 @@ import { LinkButton } from '@/components/Button';
 import { Badge, Card, EmptyState, KeyValue, List, ListRow, Notice, Section } from '@/components/Card';
 import { ContactActions } from '@/components/ContactActions';
 import { PdfButton } from '@/components/PdfButton';
+import { Segmented } from '@/components/form';
 import { useSettings, useTables } from '@/data/hooks';
 import { CONSULT_STATUS, DEWORM_KIND, DX_KIND, DX_STATUS, EXAM_STATUS, EXAM_STATUS_TONE, EXAM_TYPE, PATIENT_STATUS, REPRO, SEX, TREAT_STATUS } from '@/data/labels';
 import { ageText, formatDate, formatDateTime, relativeDays } from '@/lib/dates';
@@ -33,6 +34,7 @@ import { AlertsPanel } from './AlertsPanel';
 import { WeightSheet } from './WeightSheet';
 import { latestWeight, patientAlerts, patientTimeline, speciesName, tutorsOf, weightHistory, type TimelineKind } from './selectors';
 import { pdf } from '@/pdf';
+import { LabTrends } from '@/features/exams/LabTrends';
 
 const TABS = [
   { key: 'resumen', label: 'Resumen' },
@@ -427,7 +429,9 @@ function PreventiveTab({ patientId }: { patientId: string }) {
 
 function ExamsTab({ patientId }: { patientId: string }) {
   const tables = useTables();
-  const exams = [...tables.exams.values()].filter((e) => e.patientId === patientId).sort((a, b) => b.requestedAt.localeCompare(a.requestedAt));
+  const exams = useMemo(() => [...tables.exams.values()].filter((e) => e.patientId === patientId).sort((a, b) => b.requestedAt.localeCompare(a.requestedAt)), [tables.exams, patientId]);
+  const withValues = exams.some((e) => e.values?.length);
+  const [view, setView] = useState<'list' | 'trends'>('list');
   return (
     <Section
       title="Exámenes"
@@ -437,13 +441,38 @@ function ExamsTab({ patientId }: { patientId: string }) {
         </LinkButton>
       }
     >
-      {exams.length === 0 ? (
+      {withValues && (
+        <Segmented
+          name="Vista de exámenes"
+          value={view}
+          onChange={setView}
+          options={[
+            { value: 'list', label: 'Lista' },
+            { value: 'trends', label: 'Evolución de valores' },
+          ]}
+        />
+      )}
+      {view === 'trends' && withValues ? (
+        <div className="mt-3">
+          <LabTrends exams={exams} />
+        </div>
+      ) : exams.length === 0 ? (
         <p className="px-1 text-sm text-ink-500">Sin exámenes registrados.</p>
       ) : (
-        <List>
-          {exams.map((e) => (
-            <ListRow key={e.id} to={`/examenes/${e.id}`} title={e.name || EXAM_TYPE[e.type]} subtitle={[formatDate(e.requestedAt), e.lab].filter(Boolean).join(' · ')} trailing={<Badge tone={EXAM_STATUS_TONE[e.status]}>{EXAM_STATUS[e.status]}</Badge>} />
-          ))}
+        <List className={withValues ? 'mt-3' : undefined}>
+          {exams.map((e) => {
+            const vals = (e.values ?? []).filter((v) => v.value !== undefined || v.text);
+            const out = vals.filter((v) => (v.refLow !== undefined && v.value !== undefined && v.value < v.refLow) || (v.refHigh !== undefined && v.value !== undefined && v.value > v.refHigh)).length;
+            return (
+              <ListRow
+                key={e.id}
+                to={`/examenes/${e.id}`}
+                title={e.name || EXAM_TYPE[e.type]}
+                subtitle={[formatDate(e.requestedAt), e.lab, vals.length ? `${vals.length} valor${vals.length === 1 ? '' : 'es'}${out ? ` · ${out} fuera de rango` : ''}` : ''].filter(Boolean).join(' · ')}
+                trailing={<Badge tone={EXAM_STATUS_TONE[e.status]}>{EXAM_STATUS[e.status]}</Badge>}
+              />
+            );
+          })}
         </List>
       )}
     </Section>

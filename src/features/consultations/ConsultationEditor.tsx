@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Ban, Check, ChevronDown, CircleAlert, CloudOff, Copy, Loader2, Lock, Sparkles } from 'lucide-react';
+import { Ban, Check, CheckCheck, ChevronDown, CircleAlert, CloudOff, Copy, Loader2, Lock, Mic, Sparkles } from 'lucide-react';
 import { PageHeader, Page, StickyActions } from '@/components/layout';
 import { Button } from '@/components/Button';
 import { Notice } from '@/components/Card';
@@ -20,7 +20,10 @@ import { amendConsultation, finalizeConsultation, saveConsultationDraft, voidCon
 import { EditorCtx, type EditorApi } from './editorContext';
 import { AnamnesisSection, AssessmentSection, ClosingSection, ExamSection, FollowUpSection, PlanSection, ReasonSection } from './EditorSections';
 import { CopyFromPreviousSheet, TemplateSheet } from './ReuseSheets';
-import { finalizeBlockers } from './model';
+import { DictationSheet } from '@/features/voice/DictationSheet';
+import { applyDictation } from '@/features/voice/apply';
+import type { ParsedItem } from '@/features/voice/consultation';
+import { finalizeBlockers, missingImportant, reviewDictatedOnEdit, type MissingItem } from './model';
 
 type SaveStatus = { kind: 'saved' | 'saving' | 'dirty' | 'error'; at?: string; error?: string };
 
@@ -40,6 +43,7 @@ export function ConsultationEditor({ consultationId, mode }: { consultationId: s
   const [open, setOpen] = useState<Record<string, boolean>>({ reason: true, followup: true });
   const [copyOpen, setCopyOpen] = useState(false);
   const [tplOpen, setTplOpen] = useState(false);
+  const [dictOpen, setDictOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const latest = useRef(state);
   latest.current = state;
@@ -76,7 +80,10 @@ export function ConsultationEditor({ consultationId, mode }: { consultationId: s
     dirty.current = true;
     setState(fn);
   }, []);
-  const setC = useCallback((path: string, value: unknown) => change((s) => ({ ...s, consultation: setPath(s.consultation, path, value) })), [change]);
+  const setC = useCallback(
+    (path: string, value: unknown) => change((s) => ({ ...s, consultation: reviewDictatedOnEdit(setPath(s.consultation, path, value), path) })),
+    [change],
+  );
   const markReviewed = useCallback(
     (path: string) => change((s) => ({ ...s, consultation: { ...s.consultation, provenance: s.consultation.provenance.map((p) => (p.path === path ? { ...p, reviewed: true } : p)) } })),
     [change],
@@ -100,6 +107,32 @@ export function ConsultationEditor({ consultationId, mode }: { consultationId: s
   const c = state.consultation;
   const blockers = finalizeBlockers(c);
   const abnormalWithoutNotes = Object.entries(c.exam.systems).filter(([, f]) => f?.status === 'abnormal' && !f.notes?.trim()).length;
+  const missing = missingImportant(c, state.diagnoses, state.treatments);
+  const unreviewed = c.provenance.filter((p) => !p.reviewed);
+  const unreviewedDictated = unreviewed.filter((p) => p.source === 'dictated').length;
+  const bcsScale = species?.bcsScale ?? c.exam.bcs.scale ?? 9;
+
+  const openSection = (key: string) => {
+    setOpen((o) => ({ ...o, [key]: true }));
+    setTimeout(() => document.getElementById(`sec-${key}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 30);
+  };
+
+  const applyDictated = (items: ParsedItem[], text: string) => {
+    const r = applyDictation(latest.current, items, text);
+    change(() => r.state);
+    setDictOpen(false);
+    setOpen((o) => ({ ...o, ...Object.fromEntries(items.filter((i) => i.selected).map((i) => [i.section, true])) }));
+    toast.success(r.paths.length ? `${r.paths.length} dato(s) agregados. Quedan marcados «Dictado: revisar».` : 'Texto dictado guardado en la consulta.');
+  };
+
+  const reviewAllDictated = async () => {
+    const ok = await confirmDialog({
+      title: 'Marcar lo dictado como revisado',
+      message: `¿Revisaste los ${unreviewedDictated} dato(s) dictados en la ficha? Quedarán como revisados.`,
+      confirmLabel: 'Sí, los revisé',
+    });
+    if (ok) change((s) => ({ ...s, consultation: { ...s.consultation, provenance: s.consultation.provenance.map((p) => (p.source === 'dictated' ? { ...p, reviewed: true } : p)) } }));
+  };
 
   const applyReuse = (source: 'copied' | 'template', fromId: string, values: Record<string, string>) => {
     change((s) => {
@@ -125,12 +158,16 @@ export function ConsultationEditor({ consultationId, mode }: { consultationId: s
       toast.error('Hay diagnósticos o tratamientos sin nombre. Complétalos o quítalos.');
       return;
     }
+    const stillMissing = missingImportant(current.consultation, current.diagnoses, current.treatments);
     const ok = await confirmDialog({
       title: 'Finalizar consulta',
       message: (
         <>
           <p>La ficha quedará cerrada. Las correcciones posteriores se registrarán como enmiendas, con motivo y conservando la versión anterior.</p>
           {abnormalWithoutNotes > 0 && <p className="font-semibold text-amber-800">Hay {abnormalWithoutNotes} sistema(s) marcados como alterados sin descripción.</p>}
+          {stillMissing.length > 0 && (
+            <p className="font-semibold text-amber-800">Datos importantes sin registrar: {stillMissing.map((m) => m.label).join(', ')}.</p>
+          )}
         </>
       ),
       confirmLabel: 'Finalizar',
@@ -224,6 +261,11 @@ export function ConsultationEditor({ consultationId, mode }: { consultationId: s
           </Notice>
         )}
         <AlertsPanel alerts={patientAlerts(patient, tables)} compact editTo={`/pacientes/${patient.id}/antecedentes`} />
+        {mode === 'draft' && (
+          <Button block variant="soft" icon={<Mic className="size-5" />} onClick={() => setDictOpen(true)}>
+            Dictar la consulta
+          </Button>
+        )}
         <div className="flex flex-wrap gap-2">
           <Button size="sm" variant="secondary" icon={<Copy className="size-4" />} onClick={() => setCopyOpen(true)}>
             Copiar de consulta anterior
@@ -232,11 +274,17 @@ export function ConsultationEditor({ consultationId, mode }: { consultationId: s
             Usar plantilla
           </Button>
         </div>
-        {c.provenance.some((p) => !p.reviewed) && (
+        {unreviewed.length > 0 && (
           <Notice tone="warning" icon={<CircleAlert className="size-5" />}>
-            Hay {c.provenance.filter((p) => !p.reviewed).length} campo(s) reutilizados sin revisar. Debes revisarlos antes de finalizar.
+            <p>Hay {unreviewed.length} campo(s) reutilizados o dictados sin revisar. Debes revisarlos antes de finalizar.</p>
+            {unreviewedDictated > 0 && (
+              <Button size="sm" variant="secondary" className="mt-2 min-h-11" icon={<CheckCheck className="size-4" />} onClick={reviewAllDictated}>
+                Marcar lo dictado como revisado ({unreviewedDictated})
+              </Button>
+            )}
           </Notice>
         )}
+        {mode === 'draft' && missing.length > 0 && <MissingPanel missing={missing} onGo={openSection} />}
 
         <nav className="-mx-4 overflow-x-auto px-4" aria-label="Secciones de la consulta">
           <div className="flex w-max gap-1.5">
@@ -327,6 +375,7 @@ export function ConsultationEditor({ consultationId, mode }: { consultationId: s
           }}
         />
       )}
+      {dictOpen && <DictationSheet state={state} bcsScale={bcsScale} onClose={() => setDictOpen(false)} onApply={applyDictated} />}
       {tplOpen && (
         <TemplateSheet
           current={c}
@@ -339,6 +388,28 @@ export function ConsultationEditor({ consultationId, mode }: { consultationId: s
         />
       )}
     </EditorCtx.Provider>
+  );
+}
+
+/** Datos importantes aún sin registrar (aviso; no impide finalizar). Cada uno lleva a su sección. */
+function MissingPanel({ missing, onGo }: { missing: MissingItem[]; onGo: (section: string) => void }) {
+  // Al comenzar faltan casi todos: se muestra plegado para no tapar la ficha.
+  return (
+    <section className="rounded-xl border border-sky-200 bg-sky-50 px-3" aria-label="Datos importantes sin registrar">
+      <details open={missing.length <= 6}>
+        <summary className="flex min-h-11 cursor-pointer items-center justify-between gap-2 text-sm font-semibold text-sky-900">
+          Datos importantes sin registrar ({missing.length})
+          <ChevronDown className="size-4 shrink-0" aria-hidden />
+        </summary>
+        <div className="flex flex-wrap gap-1.5 pb-3">
+          {missing.map((m) => (
+            <button key={m.label} type="button" onClick={() => onGo(m.section)} className="min-h-11 rounded-full bg-white px-3 text-sm font-medium text-sky-900 ring-1 ring-sky-200 active:bg-sky-100">
+              {m.label}
+            </button>
+          ))}
+        </div>
+      </details>
+    </section>
   );
 }
 

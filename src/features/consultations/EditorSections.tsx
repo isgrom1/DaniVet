@@ -18,6 +18,7 @@ import { DoseCalculator } from '@/features/prescriptions/DoseCalculator';
 import { latestWeight } from '@/features/patients/selectors';
 import { CNumber, CText, ProvenanceFor, useEditor } from './editorContext';
 import { addFollowUpTask } from './actions';
+import { dropProvenance, reviewDictatedOnEdit } from './model';
 
 export function ReasonSection() {
   return (
@@ -93,7 +94,10 @@ function FindingRow({ path, label, extra }: { path: string; label: string; extra
   const notes = (getPath(c, `${path}.notes`) as string | undefined) ?? '';
   return (
     <div className="space-y-2 py-3">
-      <p className="text-[15px] font-semibold text-ink-800">{label}</p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-[15px] font-semibold text-ink-800">{label}</p>
+        <ProvenanceFor path={path} />
+      </div>
       <Segmented name={label} size="sm" value={status} onChange={(v) => setC(`${path}.status`, v)} options={FINDING_OPTS} />
       {status !== 'not_evaluated' && (
         <>
@@ -129,7 +133,7 @@ export function ExamSection() {
         <CNumber path="exam.heartRateBpm" label="Frec. cardíaca" unit="lpm" integer range={r.heartRateBpm} />
         <CNumber path="exam.respRateRpm" label="Frec. respiratoria" unit="rpm" integer range={r.respRateRpm} />
         <CNumber path="exam.crtSec" label="Llenado capilar (TLLC)" unit="s" digits={1} />
-        <Field label={`Condición corporal (1–${scale})`} hint={c.exam.bcs.value === undefined ? 'Sin registrar' : undefined}>
+        <Field label={`Condición corporal (1–${scale})`} hint={c.exam.bcs.value === undefined ? 'Sin registrar' : undefined} tag={<ProvenanceFor path="exam.bcs" />}>
           <Select
             value={c.exam.bcs.value !== undefined ? String(c.exam.bcs.value) : ''}
             onChange={(e) => setC('exam.bcs', { value: e.target.value ? Number(e.target.value) : undefined, scale })}
@@ -186,7 +190,18 @@ export function AssessmentSection() {
   const tables = useTables();
   const knownDx = [...new Set([...tables.diagnoses.values()].map((d) => d.name))].sort();
   const exams = [...tables.exams.values()].filter((e) => e.consultationId === c.id);
-  const setDx = (i: number, p: Partial<Diagnosis>) => change((s) => ({ ...s, diagnoses: s.diagnoses.map((d, j) => (j === i ? { ...d, ...p } : d)) }));
+  const setDx = (i: number, p: Partial<Diagnosis>) =>
+    change((s) => ({
+      ...s,
+      diagnoses: s.diagnoses.map((d, j) => (j === i ? { ...d, ...p } : d)),
+      consultation: s.diagnoses[i] ? reviewDictatedOnEdit(s.consultation, `diagnoses.${s.diagnoses[i].id}`) : s.consultation,
+    }));
+  const removeDx = (i: number) =>
+    change((s) => ({
+      ...s,
+      diagnoses: s.diagnoses.filter((_, j) => j !== i),
+      consultation: s.diagnoses[i] ? dropProvenance(s.consultation, `diagnoses.${s.diagnoses[i].id}`) : s.consultation,
+    }));
   return (
     <div className="space-y-4">
       <FieldGroup label="Lista de problemas">
@@ -209,9 +224,10 @@ export function AssessmentSection() {
         <div className="space-y-2">
           {state.diagnoses.map((d, i) => (
             <Card key={d.id} padded={false} className="space-y-2 p-3">
+              <ProvenanceFor path={`diagnoses.${d.id}`} />
               <div className="flex gap-2">
                 <TextInput value={d.name} list="dx-known" placeholder="Diagnóstico" aria-label={`Diagnóstico ${i + 1}`} onChange={(e) => setDx(i, { name: e.target.value })} />
-                <button type="button" aria-label="Quitar diagnóstico" className="flex size-11 shrink-0 items-center justify-center text-red-700" onClick={() => change((s) => ({ ...s, diagnoses: s.diagnoses.filter((_, j) => j !== i) }))}>
+                <button type="button" aria-label="Quitar diagnóstico" className="flex size-11 shrink-0 items-center justify-center text-red-700" onClick={() => removeDx(i)}>
                   <Trash2 className="size-5" />
                 </button>
               </div>
@@ -292,9 +308,16 @@ export function PlanSection() {
   const { c, state, change, patient } = useEditor();
   const tables = useTables();
   const [calcFor, setCalcFor] = useState<number | null>(null);
+  const removeTx = (i: number) =>
+    change((s) => ({
+      ...s,
+      treatments: s.treatments.filter((_, j) => j !== i),
+      consultation: s.treatments[i] ? dropProvenance(s.consultation, `treatments.${s.treatments[i].id}`) : s.consultation,
+    }));
   const setTx = (i: number, p: Partial<Treatment>) =>
     change((s) => ({
       ...s,
+      consultation: s.treatments[i] ? reviewDictatedOnEdit(s.consultation, `treatments.${s.treatments[i].id}`) : s.consultation,
       treatments: s.treatments.map((t, j) => {
         if (j !== i) return t;
         const next = { ...t, ...p };
@@ -315,6 +338,7 @@ export function PlanSection() {
         <div className="space-y-2">
           {state.treatments.map((t, i) => (
             <Card key={t.id} padded={false} className="space-y-3 p-3">
+              <ProvenanceFor path={`treatments.${t.id}`} />
               <div className="flex gap-2">
                 <Select value={t.kind} onChange={(e) => setTx(i, { kind: e.target.value as Treatment['kind'] })} aria-label="Tipo de tratamiento" className="w-40 shrink-0">
                   {Object.entries(TREAT_KIND).map(([k, v]) => (
@@ -324,7 +348,7 @@ export function PlanSection() {
                   ))}
                 </Select>
                 <TextInput value={t.name} placeholder={t.kind === 'medication' ? 'Medicamento' : 'Descripción'} aria-label={`Tratamiento ${i + 1}`} onChange={(e) => setTx(i, { name: e.target.value })} />
-                <button type="button" aria-label="Quitar tratamiento" className="flex size-11 shrink-0 items-center justify-center text-red-700" onClick={() => change((s) => ({ ...s, treatments: s.treatments.filter((_, j) => j !== i) }))}>
+                <button type="button" aria-label="Quitar tratamiento" className="flex size-11 shrink-0 items-center justify-center text-red-700" onClick={() => removeTx(i)}>
                   <Trash2 className="size-5" />
                 </button>
               </div>
@@ -423,7 +447,7 @@ export function PlanSection() {
 function PlanControlDate() {
   const { c, setC } = useEditor();
   return (
-    <Field label="Fecha recomendada de control" hint="Aparecerá en Inicio como control próximo.">
+    <Field label="Fecha recomendada de control" hint="Aparecerá en Inicio como control próximo." tag={<ProvenanceFor path="plan.controlDate" />}>
       <div className="space-y-2">
         <DateInput value={c.plan.controlDate ?? ''} onChange={(v) => setC('plan.controlDate', v || undefined)} min={todayISO()} />
         <Segmented

@@ -25,12 +25,12 @@ export function useEditor(): EditorApi {
   return ctx;
 }
 
-/** Etiqueta de origen para campos copiados o de plantilla, con botón para confirmar la revisión. */
+/** Etiqueta de origen para campos copiados, de plantilla o dictados, con botón para confirmar la revisión. */
 export function ProvenanceFor({ path }: { path: string }) {
   const { c, markReviewed } = useEditor();
   const p = c.provenance.find((x) => x.path === path);
   if (!p) return null;
-  if (p.reviewed) return <ProvenanceTag kind={p.source} label={p.source === 'copied' ? 'Copiado · revisado' : 'Plantilla · revisado'} />;
+  if (p.reviewed) return <ProvenanceTag kind={p.source} label={p.source === 'copied' ? 'Copiado · revisado' : p.source === 'dictated' ? 'Dictado · revisado' : 'Plantilla · revisado'} />;
   return (
     <span className="inline-flex items-center gap-1">
       <ProvenanceTag kind={p.source} />
@@ -89,6 +89,7 @@ export function CNumber({
   return (
     <Field
       label={label}
+      tag={<ProvenanceFor path={path} />}
       error={invalid ? `Valor no válido${integer ? ' (número entero)' : ''}` : null}
       hint={out ? <span className="font-semibold text-amber-800">Fuera del rango de referencia configurado ({range?.min ?? '…'}–{range?.max ?? '…'} {unit})</span> : (hint ?? refText ?? (value === undefined ? 'Sin registrar' : undefined))}
     >

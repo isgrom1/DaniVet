@@ -193,7 +193,46 @@ export async function loadDemoData(): Promise<void> {
     nextDueSource: 'manual',
     status: 'applied',
   });
-  b.insert('exams', { ...D, patientId: rocky.id, consultationId: cons.id, type: 'hemogram', name: 'Examen de ejemplo (DEMO)', requestedAt: addDays(today, -20), sampleDate: addDays(today, -20), lab: 'Laboratorio de ejemplo', status: 'received', results: 'Resultado de ejemplo (DEMO).', resultsSource: 'transcribed', receivedAt: addDays(today, -2) });
+  // Valores y rangos de ejemplo (DEMO), para conocer la evolución de valores. No son rangos de referencia reales.
+  const demoValues = (list: Array<[string, string, number, string, number, number]>) =>
+    list.map(([analyte, name, value, unit, refLow, refHigh]) => ({ id: newId(), analyte, name, value, unit, refLow, refHigh }));
+  b.insert('exams', {
+    ...D,
+    patientId: rocky.id,
+    type: 'hemogram',
+    name: 'Hemograma anterior de ejemplo (DEMO)',
+    requestedAt: addDays(today, -140),
+    sampleDate: addDays(today, -140),
+    lab: 'Laboratorio de ejemplo',
+    status: 'reviewed',
+    receivedAt: addDays(today, -137),
+    values: demoValues([
+      ['hct', 'Hematocrito', 44, '%', 37, 55],
+      ['hgb', 'Hemoglobina', 15.1, 'g/dL', 12, 18],
+      ['wbc', 'Leucocitos', 9.8, '×10³/µL', 6, 17],
+      ['plt', 'Plaquetas', 310, '×10³/µL', 200, 500],
+    ]),
+  });
+  b.insert('exams', {
+    ...D,
+    patientId: rocky.id,
+    consultationId: cons.id,
+    type: 'hemogram',
+    name: 'Examen de ejemplo (DEMO)',
+    requestedAt: addDays(today, -20),
+    sampleDate: addDays(today, -20),
+    lab: 'Laboratorio de ejemplo',
+    status: 'received',
+    results: 'Resultado de ejemplo (DEMO).',
+    resultsSource: 'transcribed',
+    receivedAt: addDays(today, -2),
+    values: demoValues([
+      ['hct', 'Hematocrito', 35.5, '%', 37, 55],
+      ['hgb', 'Hemoglobina', 12.4, 'g/dL', 12, 18],
+      ['wbc', 'Leucocitos', 18.6, '×10³/µL', 6, 17],
+      ['plt', 'Plaquetas', 280, '×10³/µL', 200, 500],
+    ]),
+  });
   const charge = b.insert('charges', {
     ...D,
     tutorId: jorge.id,

@@ -17,6 +17,7 @@ import { addDays, formatDate, formatDateTime, todayISO } from '@/lib/dates';
 import { emptyToUndef } from '@/lib/objects';
 import { useFormDraft } from '@/lib/useFormDraft';
 import { AttachmentGrid, AttachmentPicker } from '@/features/attachments/AttachmentViews';
+import { LabValuesEditor, rangesToRemember, rowsFromValues, valuesFromRows, type ValueRow } from './LabValuesEditor';
 
 interface FormState {
   patientId: string;
@@ -31,6 +32,7 @@ interface FormState {
   receivedAt: string;
   interpretation: string;
   followUpAction: string;
+  values: ValueRow[];
 }
 
 export function ExamForm() {
@@ -53,6 +55,7 @@ export function ExamForm() {
     receivedAt: existing?.receivedAt ?? '',
     interpretation: existing?.interpretation ?? '',
     followUpAction: existing?.followUpAction ?? '',
+    values: rowsFromValues(existing?.values),
   }));
   const f = form.value;
   const [picker, setPicker] = useState(false);
@@ -61,6 +64,8 @@ export function ExamForm() {
   const patient = tables.patients.get(f.patientId);
   const attachments = existing ? [...tables.attachments.values()].filter((a) => a.examId === existing.id) : [];
   const labs = [...new Set([...tables.exams.values()].map((e) => e.lab).filter(Boolean) as string[])];
+  const patientExams = [...tables.exams.values()].filter((e) => e.patientId === f.patientId);
+  const settings = tables.settings.get('settings');
 
   const errors = {
     patient: !patient ? 'Elige el paciente' : null,
@@ -72,6 +77,11 @@ export function ExamForm() {
     setTried(true);
     if (Object.values(errors).some(Boolean)) {
       toast.error('Revisa los campos marcados.');
+      return;
+    }
+    const lab = valuesFromRows(f.values ?? []);
+    if (lab.errors.length) {
+      toast.error(lab.errors[0]);
       return;
     }
     const data = {
@@ -89,11 +99,17 @@ export function ExamForm() {
       interpretation: emptyToUndef(f.interpretation),
       followUpAction: emptyToUndef(f.followUpAction),
       reviewedAt: f.status === 'reviewed' ? (existing?.reviewedAt ?? new Date().toISOString()) : undefined,
+      values: lab.values.length ? lab.values : undefined,
     };
     setBusy(true);
     try {
       const rec = existing ? await update('exams', existing.id, (cur) => ({ ...cur, ...data }), { baseRev: existing.rev }) : await insert('exams', data);
       await form.done();
+      // Se recuerdan los rangos de este informe para el próximo examen del mismo laboratorio y especie.
+      const remember = patient ? rangesToRemember(lab.values, patient.speciesId, f.lab) : {};
+      if (Object.keys(remember).length && settings) {
+        await update('settings', settings.id, (cur) => ({ ...cur, labRanges: { ...(cur.labRanges ?? {}), ...remember } }), { audit: false }).catch(() => undefined);
+      }
       toast.success(existing ? 'Examen actualizado' : 'Examen registrado');
       if (!existing || !andStay) navigate(andStay ? `/examenes/${rec.id}` : consultationId ? `/consultas/${consultationId}` : `/pacientes/${f.patientId}?tab=examenes`, { replace: true });
     } catch (e) {
@@ -176,6 +192,20 @@ export function ExamForm() {
               </Select>
             </Field>
           </Card>
+        </Section>
+        <Section title="Valores del examen">
+          <LabValuesEditor
+            rows={f.values ?? []}
+            onChange={(rows) => form.setField('values', rows)}
+            examType={f.type}
+            examId={existing?.id}
+            examDate={f.sampleDate || f.requestedAt}
+            exams={patientExams}
+            speciesId={patient?.speciesId}
+            lab={f.lab}
+            saved={settings?.labRanges}
+            status={f.status}
+          />
         </Section>
         <Section title="Resultados">
           <Card className="space-y-4">
