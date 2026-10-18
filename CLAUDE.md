@@ -61,5 +61,6 @@ toca, la instala al bloquearse, después de guardar lo abierto. Al desbloquear s
 
 ## Versiones publicadas
 
+- 1.2.0: dictado de la consulta, aviso de datos faltantes, valores de exámenes y su evolución (ejecución n.º 7, 18-10-2026).
 - 1.1.0: actualización automática, novedades y botón de sugerencias.
 - 1.0.0: commit `8322791`, primera versión publicada y verificada (11-10-2026).
