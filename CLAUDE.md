@@ -67,6 +67,7 @@ toca, la instala al bloquearse, después de guardar lo abierto. Al desbloquear s
 
 ## Versiones publicadas
 
+- 1.3.0: lectura opcional de informes con IA, con la clave propia de cada profesional (ejecución n.º 9, 21-10-2026).
 - 1.2.1: pegado de informes con unidades y rangos (ejecución n.º 8, 18-10-2026).
 - 1.2.0: dictado de la consulta, aviso de datos faltantes, valores de exámenes y su evolución (ejecución n.º 7, 18-10-2026).
 - 1.1.0: actualización automática, novedades y botón de sugerencias.
