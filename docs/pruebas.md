@@ -1,6 +1,6 @@
 # Resultados de las pruebas
 
-Ejecutadas el 11 de octubre de 2026 (versiones 1.0.0 y 1.1.0) y el 18 de octubre de 2026 (versión 1.2.0) sobre el código de esta rama. Todas las cifras corresponden a ejecuciones reales.
+Ejecutadas el 11 de octubre de 2026 (versiones 1.0.0 y 1.1.0), el 18 de octubre de 2026 (versiones 1.2.0 y 1.2.1) y el 21 de octubre de 2026 (versión 1.3.0) sobre el código de esta rama. Todas las cifras corresponden a ejecuciones reales.
 
 ## Resumen
 
@@ -16,6 +16,9 @@ Ejecutadas el 11 de octubre de 2026 (versiones 1.0.0 y 1.1.0) y el 18 de octubre
 | Versión 1.1.0 en GitHub Actions ([ejecución n.º 6](https://github.com/isgrom1/DaniVet/actions/runs/38182579543)) | **Aprobadas**: 47 unitarias; 7 E2E en servidor local, incluida la actualización real de la app instalada; flujo completo contra la URL publicada |
 | Versión 1.2.0 en GitHub Actions ([ejecución n.º 7](https://github.com/isgrom1/DaniVet/actions/runs/39166686783)) | **Aprobadas** las 4 etapas: tipos, 69 unitarias, compilación y **10 E2E** en servidor local (flujo de aceptación, instalación, dictado y exámenes en los tres iPhone y la actualización real de la app instalada; 2 omitidas a propósito: la actualización se prueba en un solo tamaño); publicación en Pages; y **9 / 9 E2E contra la URL publicada** (https://isgrom1.github.io/DaniVet/), incluido el dictado y la evolución de exámenes |
 | Versión 1.2.0 en este entorno (18-10-2026) | Tipos sin errores; **69 / 69 unitarias** (10 archivos); compilación correcta (JS principal 300 KB comprimido, 1,5 MB guardados para uso sin conexión); E2E **9 / 9 aprobadas** en 2,7 min: flujo de aceptación, instalación y dictado y exámenes en los tres iPhone (la actualización real se ejecuta en GitHub Actions) |
+| Versión 1.2.1 en este entorno (18-10-2026) | Tipos sin errores; **72 / 72 unitarias**; compilación correcta; E2E **9 / 9 aprobadas** (la actualización real se ejecuta en GitHub Actions) |
+| Versión 1.2.1 en GitHub Actions ([ejecución n.º 8](https://github.com/isgrom1/DaniVet/actions/runs/39170195819)) | **Aprobadas** las 4 etapas: pruebas (tipos, unitarias, compilación y E2E en servidor local), publicación en Pages y E2E contra la URL publicada |
+| Versión 1.3.0 en este entorno (21-10-2026) | Tipos sin errores; **78 / 78 unitarias** (11 archivos); compilación correcta (JS principal 309 KB comprimido; el SDK de Anthropic, 58 KB comprimido, se carga solo al usar la lectura con IA; 1,7 MB guardados para uso sin conexión); E2E **12 / 12 aprobadas** en 3 min: flujo de aceptación, instalación, dictado y exámenes, y **lectura de informes con IA** (API simulada) en los tres iPhone (3 omitidas a propósito: la actualización real se ejecuta en GitHub Actions) |
 | Contra la URL publicada (https://isgrom1.github.io/DaniVet/, desde Internet) | **6 / 6 aprobadas** (1,9 min) en la [ejecución n.º 3](https://github.com/isgrom1/DaniVet/actions/runs/38177804095); además `HTTP/2 200` por HTTPS (con HSTS) y manifiesto, service worker e ícono para iPhone con respuesta 200 |
 | En un iPhone real | **No realizada** (ver "Lo que no se pudo probar") |
 
@@ -47,13 +50,15 @@ Archivo `e2e/acceptance.spec.ts`. Se ejecuta en Chromium emulando **iPhone SE (3
 
 Además, `e2e/voice-labs.spec.ts` (**dictado y valores de exámenes**, versión 1.2.0) en los tres iPhone: avisa los datos importantes que faltan; dicta una consulta completa (el texto llega al cuadro como lo escribe el micrófono del teclado), revisa la vista previa (cada dato con su frase de origen, lo no reconocido, lo que aún faltaría), desmarca un dato y agrega el resto; comprueba cada campo en la ficha, la marca «Dictado: revisar», que corregir un dato lo deja revisado, que no se puede finalizar sin revisar y que el texto dictado queda en la consulta finalizada. Luego registra dos exámenes de bioquímica (uno escrito, con los campos de referencia vacíos al comenzar, y otro dictado), verifica el rango recordado del mismo laboratorio, el valor anterior con su diferencia y la marca «Alto»; y en la ficha del paciente la tabla de evolución, los filtros (fuera de rango, examen específico comparado con el anterior, búsqueda por sigla) y el gráfico de un valor.
 
+Además, `e2e/ai-reader.spec.ts` (**lectura de informes con IA**, versión 1.3.0) en los tres iPhone, con `api.anthropic.com` simulado (no se usa una clave real ni tiene costo): sin activar, el examen no ofrece la lectura y «Dictar o pegar» explica cómo activarla, sin ninguna conexión a Anthropic; al activarla, el botón exige aceptar el aviso, una clave inválida se rechaza con un mensaje claro y la válida se prueba (`GET /v1/models/claude-opus-5-5`) antes de guardarse; IndexedDB no contiene la clave en claro; en un hemograma nuevo se elige una foto (selector de archivos del sistema), se muestra qué se enviará y no se envía nada hasta tocar «Leer con IA»; una cuenta sin saldo muestra su mensaje y se reintenta; lo leído queda en el cuadro de texto y en la vista previa (con unidad y rango) y lo no reconocido aparte; la solicitud usa el modelo indicado, la foto en JPEG, la clave de la profesional y no contiene el nombre del paciente, del tutor ni de la profesional; se desmarca un valor, se agregan los demás (con la marca «Alto») y se guarda; al desactivar, se borra la clave y el examen deja de ofrecer la lectura.
+
 Además, `e2e/update.spec.ts` (**actualización real**, en GitHub Actions en cada cambio) instala la app, compila una versión nueva mientras está abierta y comprueba: con la app bloqueada, la versión nueva se instala sola al abrirla (servida por la app instalada, no por la red); en uso, aparece el aviso sin interrumpir y la versión se instala al bloquear; los datos se conservan; y las novedades se muestran una sola vez.
 
 Además, `la app se puede instalar` comprueba el manifiesto (`standalone`, `es-CL`, ícono 512×512), el ícono para iPhone, las etiquetas para pantalla de inicio y la política de seguridad de contenidos.
 
 Durante todo el flujo se registran los errores de JavaScript de la página: **ninguno**.
 
-## Pruebas unitarias (69)
+## Pruebas unitarias (78)
 
 | Archivo | Pruebas | Qué verifica |
 | --- | --- | --- |
@@ -66,11 +71,13 @@ Durante todo el flujo se registran los errores de JavaScript de la página: **ni
 | `src/changelog.test.ts` | 5 | Cada versión tiene sus novedades (coincide con `package.json`), comparación de versiones, novedades desde la última versión vista, mensaje de sugerencia sin datos personales |
 | `src/lib/utils.test.ts` | 9 | Teléfonos chilenos, RUT (con K), números y montos, fechas locales y edades, búsqueda sin tildes, CSV seguro, clave de recuperación y contraseñas |
 | `src/features/voice/voice.test.ts` | 11 | Dictado de la consulta: números con cifras o palabras, palabras clave que no cortan frases, reparto de un dictado completo en sus campos, nada inventado (valores no dictados ausentes, imposibles desmarcados, ningún sistema normal sin dictarlo), dictado sin puntuación con varios medicamentos, gramos, soplos y escala de condición corporal; aplicación con marca «dictado», transcripción guardada, "resto normal" sin pisar hallazgos, finalización bloqueada hasta revisar, sin duplicar diagnósticos ni tratamientos |
-| `src/features/exams/labs.test.ts` | 11 | Catálogo sin rangos propios, alto/bajo solo con el rango informado, conversión de recuentos, búsqueda; dictado de valores (miles chilenos, "250 mil", %, rangos, tira de orina, números en palabras); filas del formulario y rangos recordados por laboratorio; tabla de evolución, variación, valor anterior y rangos en la unidad de la fila |
+| `src/features/exams/labs.test.ts` | 14 | Catálogo sin rangos propios, alto/bajo solo con el rango informado, conversión de recuentos, búsqueda; dictado de valores (miles chilenos, "250 mil", %, rangos, tira de orina, números en palabras); informe pegado (unidad y rango por línea, siglas entre paréntesis, líneas no reconocidas aparte, sin cruzar de línea, unidades del informe como µmol/L o g/L); filas del formulario y rangos recordados por laboratorio; tabla de evolución, variación, valor anterior y rangos en la unidad de la fila |
+| `src/features/ai/ai.test.ts` | 6 | Lectura con IA con la API simulada: conversión de lo transcrito a líneas que la app interpreta (unidades, rangos solo máximo o mínimo, recuentos absolutos, tira de orina, líneas no reconocidas); solicitud enviada (modelo, salida estructurada, *fallback*, fotos y PDF); mensajes cuando el modelo declina, no encuentra resultados, responde algo inválido o se corta; errores de la cuenta o del servicio en español; formato de la clave; clave cifrada en el teléfono, ilegible para otra bóveda y ausente de respaldos y exportaciones |
 
 ## Lo que no se pudo probar
 
 - **iPhone real / Safari (WebKit):** el entorno solo tenía Chromium. Puntos a confirmar en el teléfono: instalación con "Agregar a inicio", creación de la cuenta, PIN, compartir un PDF por WhatsApp e imprimir, guardar el respaldo en Archivos/iCloud Drive y restaurarlo, cámara para fotos, firma con el dedo y desempeño con muchos registros.
+- **Lectura con IA contra la API real de Anthropic:** no hay una clave en este entorno (ni debe haberla en el código). Se probó con la API simulada, siguiendo el formato de las respuestas del SDK oficial. Falta la primera lectura real en el iPhone, con la clave de la profesional y un informe conocido: confirmar que la foto (incluida una tomada con la cámara) y un PDF se leen bien y que cada valor coincide con el informe.
 - **Hoja de compartir de iOS:** Chromium en Linux no tiene `navigator.share`; las pruebas usan la descarga, que es la alternativa que la app ofrece cuando no se puede compartir.
 - **URL publicada desde este entorno:** no tiene acceso a `*.github.io`; por eso la verificación desde Internet la hace el trabajo **Verificar la URL publicada desde Internet** de GitHub Actions, que ejecutó este mismo flujo de aceptación contra la URL real (ver la tabla).
 

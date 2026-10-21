@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ArrowDown, ArrowUp, ClipboardPaste, ListPlus, Mic, Plus, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, ClipboardPaste, ListPlus, Mic, Plus, ScanText, Trash2 } from 'lucide-react';
 import { Button } from '@/components/Button';
 import { List, ListRow, Notice } from '@/components/Card';
 import { Checkbox, Field, SearchInput, TextArea, TextInput } from '@/components/form';
@@ -10,6 +10,8 @@ import { newId } from '@/lib/ids';
 import { formatDecimal, parseDecimal } from '@/lib/numbers';
 import { fold } from '@/features/voice/text';
 import { parseLabDictation, type ParsedLabValue } from '@/features/voice/labs';
+import { useAiConfig, type AiConfig } from '@/features/ai/aiKey';
+import { AiReportPanel, PickReportButton } from '@/features/ai/AiReportPanel';
 import { ANALYTES, PANEL_LABEL, PANELS, QUALITATIVE_OPTIONS, analyteDef, customCode, flagOf, panelForExamType, panelOf, searchAnalytes, type AnalyteDef, type PanelKey } from './analytes';
 import { deltaOf, previousValue } from './trends';
 
@@ -144,6 +146,9 @@ export function LabValuesEditor({
 }) {
   const [addOpen, setAddOpen] = useState(false);
   const [dictOpen, setDictOpen] = useState(false);
+  /** Fotos o PDF elegidos con "Leer foto o PDF con IA" (abren la hoja de dictado en modo lectura). */
+  const [aiFiles, setAiFiles] = useState<File[]>();
+  const ai = useAiConfig();
   const ctx: Ctx = { speciesId, lab, saved };
   const suggested = panelForExamType(examType);
   const present = new Set(rows.map((r) => r.analyte));
@@ -178,6 +183,7 @@ export function LabValuesEditor({
     }
     onChange(next);
     setDictOpen(false);
+    setAiFiles(undefined);
   };
 
   return (
@@ -203,6 +209,19 @@ export function LabValuesEditor({
           </button>
         ))}
       </div>
+      {ai && (
+        <PickReportButton
+          block
+          variant="soft"
+          icon={<ScanText className="size-5" />}
+          onPick={(files) => {
+            setAiFiles(files);
+            setDictOpen(true);
+          }}
+        >
+          Leer foto o PDF con IA
+        </PickReportButton>
+      )}
       <div className="grid grid-cols-2 gap-2">
         <Button variant="secondary" icon={<Mic className="size-4" />} onClick={() => setDictOpen(true)}>
           Dictar o pegar
@@ -251,7 +270,18 @@ export function LabValuesEditor({
           }}
         />
       )}
-      {dictOpen && <LabDictationSheet rows={rows} onClose={() => setDictOpen(false)} onApply={applyDictated} />}
+      {dictOpen && (
+        <LabDictationSheet
+          rows={rows}
+          ai={ai}
+          initialFiles={aiFiles}
+          onClose={() => {
+            setDictOpen(false);
+            setAiFiles(undefined);
+          }}
+          onApply={applyDictated}
+        />
+      )}
     </div>
   );
 }
@@ -409,11 +439,27 @@ function AddValueSheet({ present, onClose, onAdd }: { present: Set<string>; onCl
   );
 }
 
-function LabDictationSheet({ rows, onClose, onApply }: { rows: ValueRow[]; onClose: () => void; onApply: (vals: ParsedLabValue[]) => void }) {
+function LabDictationSheet({
+  rows,
+  ai,
+  initialFiles,
+  onClose,
+  onApply,
+}: {
+  rows: ValueRow[];
+  ai: AiConfig | null | undefined;
+  initialFiles?: File[];
+  onClose: () => void;
+  onApply: (vals: ParsedLabValue[]) => void;
+}) {
   const [text, setText] = useState('');
+  const [files, setFiles] = useState<File[]>(initialFiles ?? []);
+  const [aiText, setAiText] = useState(false);
   const [off, setOff] = useState<Record<string, boolean>>({});
   const parsed = useMemo(() => (text.trim() ? parseLabDictation(text) : { values: [], unplaced: [] }), [text]);
-  const chosen = parsed.values.filter((v) => !off[v.code]);
+  // Si un valor aparece más de una vez (por ejemplo, al leer dos veces el mismo informe), vale el último.
+  const values = useMemo(() => [...new Map(parsed.values.map((v) => [v.code, v])).values()], [parsed]);
+  const chosen = values.filter((v) => !off[v.code]);
   const ref = (v: ParsedLabValue) =>
     v.refLow !== undefined && v.refHigh !== undefined
       ? ` (ref. ${formatDecimal(v.refLow, 6)}–${formatDecimal(v.refHigh, 6)})`
@@ -428,7 +474,7 @@ function LabDictationSheet({ rows, onClose, onApply }: { rows: ValueRow[]; onClo
     <Sheet
       open
       onClose={onClose}
-      title="Dictar o pegar valores"
+      title={initialFiles ? 'Leer informe con IA' : 'Dictar o pegar valores'}
       size="full"
       footer={
         <Button block size="lg" disabled={!chosen.length} onClick={() => onApply(chosen)}>
@@ -437,6 +483,17 @@ function LabDictationSheet({ rows, onClose, onApply }: { rows: ValueRow[]; onClo
       }
     >
       <div className="space-y-3">
+        {ai && (
+          <AiReportPanel
+            config={ai}
+            files={files}
+            onFiles={setFiles}
+            onLines={(lines) => {
+              setText((t) => [t.trimEnd(), ...lines].filter(Boolean).join('\n'));
+              setAiText(true);
+            }}
+          />
+        )}
         <Notice tone="neutral" icon={<ClipboardPaste className="size-5" />}>
           <p>
             <strong>Dictar:</strong> usa el micrófono del teclado y di el nombre y luego el valor, por ejemplo: «hematocrito 45, hemoglobina 15,2, plaquetas 250 mil, creatinina 1,8 referencia 0,5 a 1,5».
@@ -444,13 +501,18 @@ function LabDictationSheet({ rows, onClose, onApply }: { rows: ValueRow[]; onClo
           <p className="mt-1.5">
             <strong>Informe en foto o PDF:</strong> ábrelo en el iPhone, mantén presionado el texto, toca «Seleccionar todo» y luego «Copiar», y pégalo aquí. Se toman el valor, la unidad y el rango de cada línea.
           </p>
+          {ai === null && (
+            <p className="mt-1.5">
+              <strong>Con IA (opcional):</strong> si la activas en Más › Lectura de informes con IA, la app puede leer la foto o el PDF del informe por ti.
+            </p>
+          )}
         </Notice>
-        <Field label="Valores dictados o pegados">
+        <Field label="Valores dictados o pegados" hint={aiText ? 'Incluye el texto que leyó la IA: puedes corregirlo antes de agregar.' : undefined}>
           <TextArea value={text} onChange={(e) => setText(e.target.value)} minRows={5} placeholder="Toca aquí para dictar o pegar…" />
         </Field>
-        {parsed.values.length > 0 && (
+        {values.length > 0 && (
           <div className="card divide-y divide-sand-100 px-3">
-            {parsed.values.map((v) => {
+            {values.map((v) => {
               const existing = rows.find((r) => r.analyte === v.code && (r.value.trim() || r.text.trim()));
               return (
                 <Checkbox

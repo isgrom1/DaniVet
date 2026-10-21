@@ -18,6 +18,7 @@ import {
   Receipt,
   Repeat,
   Scale,
+  ScanText,
   Search,
   ShieldCheck,
   Syringe,
@@ -34,12 +35,14 @@ import { useProfile } from '@/data/hooks';
 import { lock } from '@/data/session';
 import { flushAll } from '@/lib/flush';
 import { APP_VERSION } from '@/lib/platform';
+import { useAiConfig } from '@/features/ai/aiKey';
 import { FeedbackSheet } from './FeedbackSheet';
 
 const I = ({ children }: { children: ReactNode }) => <span className="flex size-9 items-center justify-center rounded-xl bg-brand-50 text-brand-700">{children}</span>;
 
 export function MoreMenu() {
   const profile = useProfile();
+  const ai = useAiConfig();
   const [feedback, setFeedback] = useState(false);
   return (
     <>
@@ -72,6 +75,7 @@ export function MoreMenu() {
             <ListRow to="/ajustes/plantillas" leading={<I><FileStack className="size-5" /></I>} title="Plantillas y textos frecuentes" />
             <ListRow to="/ajustes/pagos" leading={<I><CreditCard className="size-5" /></I>} title="Medios de pago" />
             <ListRow to="/ajustes/inicio" leading={<I><LayoutDashboard className="size-5" /></I>} title="Pantalla de inicio" />
+            <ListRow to="/ajustes/ia" leading={<I><ScanText className="size-5" /></I>} title="Lectura de informes con IA" subtitle={ai === undefined ? undefined : ai ? 'Activada' : 'Opcional · desactivada'} />
           </List>
         </Section>
         <Section title="Seguridad y datos">

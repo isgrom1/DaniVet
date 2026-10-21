@@ -17,7 +17,9 @@ const BASE_PATH = process.env.BASE_PATH || '/';
 
 /**
  * Política de seguridad de contenidos (CSP) aplicada solo a la compilación de producción.
- * La app no realiza solicitudes a servidores externos: todo se procesa en el dispositivo.
+ * La app no realiza solicitudes a servidores externos: todo se procesa en el dispositivo. Única excepción opcional:
+ * la lectura de fotos o PDF de informes con Claude (api.anthropic.com), que solo funciona si la profesional la activa
+ * con su propia clave.
  */
 /** Reemplaza %APP_NAME% en index.html (título y nombre para la pantalla de inicio del iPhone). */
 function appNameInHtml(): Plugin {
@@ -32,7 +34,9 @@ function contentSecurityPolicy(): Plugin {
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' blob: data:",
     "font-src 'self'",
-    "connect-src 'self' blob: data:",
+    // Única conexión externa: la lectura opcional de informes con Claude (desactivada hasta que la profesional
+    // ingresa su propia clave; autorizada por Isaac el 18-10-2026).
+    "connect-src 'self' blob: data: https://api.anthropic.com",
     "worker-src 'self' blob:",
     "manifest-src 'self'",
     "frame-src 'self' blob:",

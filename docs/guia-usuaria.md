@@ -41,6 +41,8 @@ Después, en **Más › Perfil profesional** completa tu RUT, teléfono, logo y 
 
 **Valores de exámenes.** Al registrar o abrir un examen, en **Valores del examen** toca el panel (Hemograma, Bioquímica, Electrolitos, Orina o Endocrino) y escribe los valores del informe con el **rango de referencia que informa el laboratorio** (la app no trae rangos propios). También puedes **Dictar o pegar** los valores: *«hematocrito 45, plaquetas 250 mil, creatinina 1,8 referencia 0,5 a 1,5»*. Si el informe llegó en papel, foto o PDF, ábrelo en el iPhone, mantén presionado el texto, toca **Seleccionar todo** y **Copiar** (en las fotos funciona con *Texto en vivo*), y pégalo en **Dictar o pegar**: la app toma de cada línea el valor, la unidad y el rango, y te muestra aparte las líneas que no reconoce. Cada valor muestra **Alto** o **Bajo** según ese rango, el valor anterior del paciente y la diferencia. La app recuerda los rangos de cada laboratorio para la próxima vez (revísalos: un laboratorio puede cambiarlos).
 
+**Leer informes con IA (opcional).** Si la activas, la app puede leer la foto o el PDF del informe por ti. Se activa una vez en **Más › Lectura de informes con IA** con tu propia clave de la API de Claude (ahí están los pasos para crearla en la Consola de Claude y el costo aproximado por informe). Luego, en **Valores del examen**, toca **Leer foto o PDF con IA**, toma una foto del informe o elige una foto o un PDF (hasta 5 páginas), revisa qué se enviará y toca **Leer con IA**. La IA transcribe nombre, valor, unidad y rango, y la app te muestra cada valor para que lo compares con el informe (puedes abrir la foto) y elijas qué agregar. La IA puede equivocarse al leer: revisa siempre. Solo se envía la foto o el PDF que elegiste, y únicamente cuando tocas **Leer con IA**; si el informe muestra datos del tutor que no quieres enviar, recórtalos antes en la app Fotos. Para desactivarla y borrar la clave del teléfono: **Desactivar y borrar la clave**.
+
 **Evolución de valores.** En la ficha del paciente, pestaña **Exámenes › Evolución de valores**, verás una tabla con cada valor en sus distintos exámenes. Puedes filtrar por **examen** (lo compara con el anterior y muestra el cambio), por panel, buscar un valor por su nombre o ver **solo los fuera de rango**. Toca un valor para ver su **gráfico** en el tiempo, con el rango de referencia y todos sus resultados.
 
 **Dosis.** En el tratamiento o la receta, el botón **Calcular** abre la calculadora: tú ingresas la dosis según tu criterio y la concentración del producto; la app calcula, muestra los pasos, revisa que las unidades sean compatibles y no sugiere dosis. Para usar el resultado debes marcar que lo revisaste.
@@ -81,7 +83,7 @@ El archivo `.dapp` está cifrado: sin tu contraseña o tu clave de recuperación
 
 ## 7. Preguntas frecuentes
 
-**¿Necesito internet?** Solo para instalarla y para recibir actualizaciones. Todo lo demás funciona sin conexión.
+**¿Necesito internet?** Solo para instalarla, para recibir actualizaciones y para leer informes con IA (si la activaste). Todo lo demás funciona sin conexión.
 
 **¿Puedo tener más de una cuenta?** Cada teléfono (o computador) tiene su propia cuenta, independiente y cifrada: si otra persona instala la app en su teléfono, crea su cuenta y ve solo sus datos. No hay una lista central de cuentas ni nadie puede ver las de otros. En un mismo teléfono la app tiene **una** cuenta; para empezar de cero en ese teléfono se usa **Eliminar todos los datos de este dispositivo** (en *Más › Seguridad* o en la pantalla de desbloqueo), después de crear un respaldo si se quieren conservar.
 
@@ -91,6 +93,6 @@ El archivo `.dapp` está cifrado: sin tu contraseña o tu clave de recuperación
 
 **¿Qué pasa si borro la app del inicio?** iOS borra sus datos. Antes de borrarla, crea y guarda un respaldo.
 
-**¿Alguien más puede ver mis datos?** No. Están cifrados con tu contraseña en tu teléfono y no se envían a ningún servidor.
+**¿Alguien más puede ver mis datos?** No. Están cifrados con tu contraseña en tu teléfono y no se envían a ningún servidor. La única excepción es opcional: si activas la lectura de informes con IA, la foto o el PDF que elijas se envía a Anthropic (empresa que desarrolla Claude) para leerlo. Según Anthropic, lo que recibe por su API no se usa para entrenar sus modelos y se elimina en un plazo de hasta 30 días.
 
 **¿Quién escucha el dictado?** La voz la transcribe el **teclado del iPhone** (Apple): según el modelo de iPhone y el idioma, Apple la procesa en el propio teléfono o en sus servidores, igual que al dictar un mensaje. DApp solo recibe el texto, lo interpreta en el teléfono y lo guarda cifrado con la consulta; no lo envía a ningún lugar.

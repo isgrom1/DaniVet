@@ -31,6 +31,10 @@ Para deshacer una versión: `git revert` del commit, subir la versión (la app c
 - **Seguridad y privacidad:** sin claves, tokens ni contraseñas en el código; sin scripts, fuentes ni servicios externos
   (CSP `default-src 'self'` en `vite.config.ts`); sin datos clínicos en notificaciones ni en mensajes que salen de la app;
   la exportación abierta exige contraseña.
+- **Única excepción externa (autorizada por Isaac el 18-10-2026):** la lectura opcional de informes con IA conecta con
+  `api.anthropic.com` (`connect-src` de la CSP). Viene desactivada; usa la clave propia de cada profesional, guardada cifrada
+  en el teléfono y fuera de respaldos y exportaciones; envía solo la foto o el PDF elegido y solo al tocar «Leer con IA»;
+  la IA solo transcribe y la profesional revisa antes de agregar. No ampliarla a otros datos o servicios sin autorización.
 - **Identificadores internos `vetcasa`** (base IndexedDB `vetcasa`, prefijos de cifrado `vetcasa:…`, formato
   `vetcasa-backup`, canal `vetcasa-data`): **no cambiarlos**, dejarían ilegibles los datos y respaldos existentes.
   El nombre visible sale de `APP_NAME` en `vite.config.ts`.
@@ -47,10 +51,12 @@ Para deshacer una versión: `git revert` del commit, subir la versión (la app c
 - `src/features/<módulo>/`: pantallas (agenda, consultations, prescriptions, preventive, finance, backup, settings, more…).
 - `src/features/voice/`: dictado (interpreta el texto que escribe el micrófono del teclado; consulta y valores de exámenes).
 - `src/features/exams/`: exámenes, catálogo de valores sin rangos propios (`analytes.ts`), evolución (`trends.ts`, `LabTrends.tsx`, `LabChart.tsx`).
+- `src/features/ai/`: lectura opcional de informes con IA (clave cifrada `aiKey.ts`, envío a Claude `labReader.ts`, panel `AiReportPanel.tsx`);
+  activación en `src/features/settings/AiSettings.tsx`.
 - `src/lib/`: cifrado, IndexedDB, fechas, RUT, teléfonos, compartir archivos, service worker (`sw.ts`).
 - `src/pdf/`: documentos PDF (pdf-lib, se carga solo al generar).
 - `src/changelog.ts`: novedades por versión.
-- `e2e/acceptance.spec.ts`: flujo de aceptación completo en tres tamaños de iPhone emulados; `e2e/voice-labs.spec.ts`: dictado y valores de exámenes.
+- `e2e/acceptance.spec.ts`: flujo de aceptación completo en tres tamaños de iPhone emulados; `e2e/voice-labs.spec.ts`: dictado y valores de exámenes; `e2e/ai-reader.spec.ts`: lectura con IA (API de Anthropic simulada).
 
 ## Actualizaciones (cómo llegan a cada teléfono)
 
@@ -61,6 +67,7 @@ toca, la instala al bloquearse, después de guardar lo abierto. Al desbloquear s
 
 ## Versiones publicadas
 
+- 1.2.1: pegado de informes con unidades y rangos (ejecución n.º 8, 18-10-2026).
 - 1.2.0: dictado de la consulta, aviso de datos faltantes, valores de exámenes y su evolución (ejecución n.º 7, 18-10-2026).
 - 1.1.0: actualización automática, novedades y botón de sugerencias.
 - 1.0.0: commit `8322791`, primera versión publicada y verificada (11-10-2026).

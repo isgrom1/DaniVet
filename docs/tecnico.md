@@ -12,9 +12,12 @@ iPhone (Safari / app instalada en la pantalla de inicio)
         ├── meta     : cabecera de la bóveda (claves envueltas), versión del modelo, sesión de PIN
         ├── records  : un registro por fila, cifrado con AES-256-GCM  ([tabla, id] → {iv, ct, rev})
         └── blobs    : fotos y documentos, cifrados
+
+Opcional (desactivado por defecto): lectura de informes con IA
+└── api.anthropic.com ← la foto o el PDF que elige la profesional, con su propia clave (solo al tocar "Leer con IA")
 ```
 
-- **Sin servidor ni base de datos remota.** El hosting solo entrega archivos estáticos; nunca recibe datos. No hay claves, tokens ni contraseñas en el código ni en el repositorio.
+- **Sin servidor ni base de datos remota.** El hosting solo entrega archivos estáticos; nunca recibe datos. No hay claves, tokens ni contraseñas en el código ni en el repositorio. La única conexión externa es opcional: la lectura de informes con IA (§7), con la clave que ingresa cada profesional.
 - **Local-first:** todo funciona sin conexión. La única copia de los datos está en el teléfono; los respaldos cifrados son la forma de llevarlos a otro lugar.
 - **¿Por qué no un backend (Supabase, Firebase…)?** Exigiría contratar o configurar servicios, administrar credenciales y asumir el tratamiento de datos clínicos en un tercero; además, el entorno de construcción no tenía acceso a esos proveedores. La arquitectura deja abierta una sincronización futura (ver §9).
 
@@ -40,12 +43,13 @@ src/
   features/<módulo>/             Pantallas y lógica de cada módulo (agenda, consultations, prescriptions…)
   features/voice/                Dictado: interpretación del texto dictado (consulta y valores de exámenes)
   features/exams/                Exámenes, catálogo de valores, evolución (tabla y gráfico)
+  features/ai/                   Lectura opcional de informes con IA (clave cifrada, envío a Claude, panel de lectura)
   lib/                           Cifrado, IndexedDB, fechas, números, RUT, teléfonos, CSV, compartir archivos
   pdf/                           Generación de PDF (pdf-lib, carga diferida)
   test/                          Configuración y utilidades de pruebas unitarias
 ```
 
-Dependencias de ejecución: `react`, `react-dom`, `react-router-dom`, `zustand`, `zod`, `idb`, `fflate`, `pdf-lib`, `lucide-react`. Sin servicios externos, analítica ni fuentes remotas (la CSP lo impide).
+Dependencias de ejecución: `react`, `react-dom`, `react-router-dom`, `zustand`, `zod`, `idb`, `fflate`, `pdf-lib`, `lucide-react` y `@anthropic-ai/sdk` (se descarga solo al usar la lectura con IA). Sin analítica ni fuentes remotas; la CSP solo permite conectarse a `api.anthropic.com` además del propio sitio.
 
 ## 3. Modelo de datos (esquema)
 
@@ -99,7 +103,8 @@ No hay un servidor de base de datos, así que las "migraciones" ocurren en el te
 - **La DEK se guarda envuelta dos veces:** con una clave derivada de la contraseña (PBKDF2-SHA256, 600.000 iteraciones, sal aleatoria) y con la **clave de recuperación** (160 bits aleatorios, en base32 de Crockford, 32 caracteres). Ninguna de las dos se guarda.
 - **PIN opcional:** guarda una copia **no extraíble** de la DEK (`CryptoKey` de WebCrypto) en IndexedDB durante 14 días; 5 intentos fallidos la eliminan. Es una comodidad: la protección fuerte es la contraseña.
 - **Bloqueo:** por inactividad (15 min por defecto), al volver de segundo plano tras ese tiempo y manualmente. Al bloquear se descarta la DEK y los datos en memoria.
-- **Navegador:** CSP estricta (`default-src 'self'`, sin scripts externos ni `eval`), `referrer` desactivado, `robots: noindex`, sin cookies, sin analítica.
+- **Navegador:** CSP estricta (`default-src 'self'`, sin scripts externos ni `eval`; `connect-src` agrega solo `https://api.anthropic.com` para la lectura opcional con IA), `referrer` desactivado, `robots: noindex`, sin cookies, sin analítica.
+- **Clave de la API de Claude (opcional):** se guarda en `meta` con la clave `aiKey`, cifrada con la DEK (datos asociados `vetcasa:meta:aiKey`). No es un registro: no entra en respaldos ni en la exportación abierta; se borra al eliminar todos los datos y al restaurar un respaldo (la restauración vacía `meta`). Una clave cifrada con otra bóveda se ignora.
 - **Archivos:** los PDF y la exportación abierta no están cifrados (se advierte al generarlos); la exportación abierta exige la contraseña. No hay enlaces públicos a archivos clínicos: todo se genera en el teléfono.
 - **Notificaciones:** la app no envía notificaciones; por eso no hay datos clínicos en la pantalla bloqueada.
 - Pruebas: `src/data/repo.test.ts` (cifrado en reposo, contraseña incorrecta, recuperación), paso 18 de `e2e/acceptance.spec.ts` (lee IndexedDB y comprueba que no contiene nombres, diagnósticos, medicamentos ni teléfonos en claro; otro perfil del navegador no ve datos; el bloqueo impide el acceso).
@@ -135,7 +140,15 @@ Para publicar en otro hosting estático (Netlify, Cloudflare Pages, un dominio p
 - **Aplicación** (`src/features/voice/apply.ts`): solo lo marcado en la vista previa; cada dato queda con procedencia `dictated` sin revisar (editarlo lo deja revisado; `reviewDictatedOnEdit` en `consultations/model.ts`). "Resto normal" solo afecta a los sistemas que siguen "No evaluado" y que no se dictaron. Diagnósticos y tratamientos ya existentes no se duplican. Lo no ubicado queda en `dictations`.
 - **Datos importantes sin registrar:** `missingImportant()` en `consultations/model.ts` (aviso, no bloquea la finalización).
 - **Valores de exámenes:** catálogo en `src/features/exams/analytes.ts` (nombres, unidades habituales, sinónimos; **sin rangos**), dictado o texto pegado en `src/features/voice/labs.ts` (miles chilenos "250.000", "250 mil", "%", rangos con palabra clave "referencia 0,5 a 1,5" o como vienen en un informe "0,5 - 1,5", "(37 - 55)", "< 120"; unidades del informe como "x10^3/uL", "/mm3", "g/L" o "µmol/L"; siglas entre paréntesis "ALT (GPT)"; marcas "H"/"*"; tira de orina "dos cruces"; el valor debe estar en la misma línea que su nombre y lo no reconocido se informa por línea), formulario en `LabValuesEditor.tsx`, evolución en `trends.ts` (filas por valor y grupo de unidad; recuentos /µL ↔ ×10³/µL se convierten, % va en otra fila; la fecha de cada examen es la toma de muestra o, si falta, la solicitud), tabla y filtros en `LabTrends.tsx`, gráfico en `LabChart.tsx` (colores validados por contraste y daltonismo: serie `#00876c`, fuera de rango `#b45309` con forma ▲/▼ además del color; la lista de valores es su equivalente accesible).
-- **Mejora posible (requiere autorización):** interpretar el dictado con un modelo de lenguaje en la nube daría más flexibilidad, pero exige un servidor intermedio (la app no puede guardar claves), un costo por uso y enviar texto clínico a un tercero (consentimiento y contrato de tratamiento de datos).
+- **Mejora posible (requiere autorización):** interpretar el dictado de la consulta con un modelo de lenguaje daría más flexibilidad. Podría usar la misma clave propia que la lectura de informes (sin servidor intermedio), pero implica un costo por uso y enviar texto clínico a un tercero.
+
+### Lectura de informes con IA (opcional)
+
+- **Activación** (`src/features/settings/AiSettings.tsx`, ruta `#/ajustes/ia`): la profesional pega su clave de la API de Claude (formato `sk-ant-…`), acepta el aviso de qué se envía y la app la prueba con `GET /v1/models/claude-opus-5-5` (sin costo) antes de guardarla cifrada (`src/features/ai/aiKey.ts`). *Desactivar y borrar la clave* la elimina del teléfono (la clave sigue existiendo en la Consola de Claude).
+- **Lectura** (`src/features/ai/labReader.ts`, `AiReportPanel.tsx`): hasta 5 fotos o PDF; las fotos se reducen a 1568 px en el lado mayor y se envían en JPEG; los PDF (hasta 15 MB) van completos. Nada se envía hasta tocar *Leer con IA*. Solicitud directa desde el teléfono (`dangerouslyAllowBrowser`, la clave es de la propia usuaria) a `POST /v1/messages` con `claude-opus-5-5`, `max_tokens` 16000, `output_config.effort: medium`, salida estructurada (esquema JSON: `legible` y `lineas` con nombre, valor, unidad, mínimo y máximo), *fallback* del lado del servidor (`fallbacks: 'default'`, beta `server-side-fallback-2026-07-01`: si el modelo declina, Anthropic reintenta con su alternativa) y 1 reintento ante errores transitorios, con tiempo máximo de 120 s. La solicitud no incluye datos de la ficha.
+- **La IA solo transcribe:** el sistema le pide copiar lo escrito, omitir lo ilegible y no incluir datos del paciente, tutor ni laboratorio. Cada resultado se convierte en una línea como las de un informe pegado (`Creatinina 1,9 mg/dL 0,5 - 1,5`) que interpreta el mismo `parseLabDictation` de `features/voice/labs.ts`; la profesional revisa y elige en la vista previa, con la foto a la vista para comparar.
+- **Errores** con mensaje en español: clave inválida (401), sin saldo o límite de gasto (400/402), permiso (403), modelo no disponible (404), archivo grande (413), límite de uso (429), servicio no disponible (5xx/529), sin conexión o tiempo agotado, modelo que declina (`stop_reason: refusal`) o respuesta cortada (`max_tokens`).
+- **Pruebas:** `src/features/ai/ai.test.ts` (conversión a líneas, solicitud enviada, errores y almacenamiento cifrado fuera de respaldos y exportaciones, con la API simulada) y `e2e/ai-reader.spec.ts` (activación, lectura de una foto, revisión y desactivación en los tres iPhone emulados, con `api.anthropic.com` simulado: no se usa una clave real).
 
 ### Cambiar el nombre de la app
 
@@ -158,7 +171,7 @@ Al cambiarla y publicar (push a la rama principal), cambian: el nombre bajo el �
 npm ci
 npm run dev           # http://localhost:5173
 npm run typecheck
-npm test              # Vitest + fake-indexeddb (69 pruebas)
+npm test              # Vitest + fake-indexeddb (78 pruebas)
 npm run build && npm run test:e2e        # Playwright con emulación de iPhone (requiere Chromium)
 E2E_BASE_URL=https://isgrom1.github.io/DaniVet/ npm run test:e2e   # contra la URL publicada
 ```

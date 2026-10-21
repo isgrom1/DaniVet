@@ -175,7 +175,7 @@ describe('aplicar lo dictado', () => {
     expect(c.exam.systems.digestive).toEqual({ status: 'abnormal', notes: 'Dolor a la palpación en epigastrio' });
     expect(c.exam.systems.ocular).toEqual({ status: 'abnormal', notes: 'Epífora' });
     expect(c.exam.systems.neurological).toEqual({ status: 'normal' });
-    expect(c.plan.controlDate).toBe(addDays(c.startedAt.slice(0, 10), 3));
+    expect(c.plan.controlDate).toBe(addDays(BASE, 3));
     expect(state.diagnoses.map((d) => [d.kind, d.name])).toEqual([
       ['presumptive', 'Gastroenteritis por indiscreción alimentaria'],
       ['differential', 'Pancreatitis'],

@@ -23,6 +23,10 @@ export function PrivacyInfo() {
         <Block title="Dónde están los datos y quién accede">
           <p>Todos los datos (tutores, pacientes, fichas, archivos) se guardan solo en este dispositivo, cifrados con AES-256-GCM. La clave se deriva de tu contraseña y nunca sale del teléfono.</p>
           <p>La app no usa servidores propios, analítica, publicidad ni servicios en la nube: no envía datos a terceros. Solo tú, con tu contraseña o PIN, puedes leerlos.</p>
+          <p>
+            Única excepción, opcional y desactivada por defecto: si activas la lectura de informes con IA (Más › Lectura de informes con IA), la foto o el PDF que elijas se
+            envía a Anthropic, con tu propia cuenta, solo para transcribir sus resultados.
+          </p>
           <p>Los respaldos (.{BACKUP_EXT}) están cifrados. La exportación abierta y los PDF o CSV que generes no lo están: compártelos solo con quien corresponda.</p>
         </Block>
         <Block title="Protección de datos personales en Chile">
@@ -46,6 +50,12 @@ export function PrivacyInfo() {
           </p>
           <p>La firma insertada como imagen y el trazo en pantalla no son firma electrónica avanzada.</p>
           <p>Los comprobantes internos no son boletas ni facturas. Las boletas de honorarios se emiten en el sistema del SII.</p>
+        </Block>
+        <Block title="Lectura de informes con IA (opcional)">
+          <p>
+            Si la usas, envías a Anthropic (Estados Unidos) los informes que elijas, que pueden contener datos personales del tutor. Envía solo lo necesario (puedes recortar
+            la foto), considera informarlo a tus clientes y revisa las condiciones de Anthropic. Anthropic indica que no usa lo recibido por su API para entrenar sus modelos.
+          </p>
         </Block>
         <Block title="Microchip y registro de mascotas">
           <p>La Ley N.º 21.020 (tenencia responsable) establece la identificación y el registro de perros y gatos. La app guarda el número de microchip, pero no se conecta al Registro Nacional de Mascotas.</p>

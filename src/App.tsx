@@ -58,6 +58,7 @@ import { MedicationRefsSettings } from '@/features/settings/MedicationRefsSettin
 import { ProtocolsSettings } from '@/features/settings/ProtocolsSettings';
 import { TemplatesSettings } from '@/features/settings/TemplatesSettings';
 import { PaymentMethodsSettings } from '@/features/settings/PaymentMethodsSettings';
+import { AiSettings } from '@/features/settings/AiSettings';
 import { DashboardSettings } from '@/features/settings/DashboardSettings';
 import { SecuritySettings } from '@/features/settings/SecuritySettings';
 import { BackupSettings } from '@/features/settings/BackupSettings';
@@ -243,6 +244,7 @@ function AppShell() {
         <Route path="/ajustes/plantillas" element={<TemplatesSettings />} />
         <Route path="/ajustes/pagos" element={<PaymentMethodsSettings />} />
         <Route path="/ajustes/inicio" element={<DashboardSettings />} />
+        <Route path="/ajustes/ia" element={<AiSettings />} />
         <Route path="/ajustes/seguridad" element={<SecuritySettings />} />
         <Route path="/ajustes/respaldo" element={<BackupSettings />} />
         <Route path="/ajustes/demo" element={<DemoDataSettings />} />

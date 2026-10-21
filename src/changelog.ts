@@ -12,6 +12,15 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.3.0',
+    date: '2026-10-21',
+    items: [
+      'Nuevo y opcional: lectura de informes con IA. En «Valores del examen» toca «Leer foto o PDF con IA», elige la foto o el PDF del informe y Claude transcribe los resultados para que los revises antes de agregarlos.',
+      'Viene desactivada. Se activa en Más › Lectura de informes con IA con tu propia clave de Claude, que se guarda cifrada en este teléfono.',
+      'Solo se envía la foto o el PDF que elijas, y únicamente cuando tocas «Leer con IA».',
+    ],
+  },
+  {
     version: '1.2.1',
     date: '2026-10-18',
     items: [
