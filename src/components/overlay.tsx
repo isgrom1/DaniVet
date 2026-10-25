@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { create } from 'zustand';
 import { CircleAlert, CircleCheck, Info, X } from 'lucide-react';
@@ -27,6 +27,12 @@ export function Sheet({
   size?: 'auto' | 'full';
 }) {
   const panel = useRef<HTMLDivElement>(null);
+  // La función de cierre suele crearse en cada render: se guarda aparte para que la hoja no se "reabra" (y no mueva el
+  // foco al primer campo) cada vez que la pantalla de fondo se actualiza, por ejemplo al guardarse sola la consulta.
+  const close = useRef(onClose);
+  useLayoutEffect(() => {
+    close.current = onClose;
+  });
   useEffect(() => {
     if (!open) return;
     openSheets++;
@@ -37,7 +43,7 @@ export function Sheet({
       (first ?? panel.current)?.focus({ preventScroll: true });
     }, 50);
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') close.current();
     };
     window.addEventListener('keydown', onKey);
     return () => {
@@ -47,7 +53,7 @@ export function Sheet({
       if (openSheets <= 0) document.body.style.overflow = '';
       prev?.focus?.({ preventScroll: true });
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
   return createPortal(

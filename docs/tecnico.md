@@ -119,6 +119,8 @@ El flujo `.github/workflows/publicar.yml` se ejecuta en cada push:
 3. **Publicar** (solo rama por defecto): compila con la ruta base que entrega `actions/configure-pages` (`/DaniVet/`) y despliega con `actions/deploy-pages`.
 4. **Verificar:** espera a que la URL responda por HTTPS, comprueba la página, el manifiesto, el service worker y el ícono, y ejecuta **el flujo de aceptación completo contra la URL publicada**.
 
+Los trabajos 1 y 4 (los que usan Playwright) corren en `ubuntu-24.04` fijo: desde octubre de 2026 `ubuntu-latest` es Ubuntu 26.04 y Playwright 1.56.1 no instala Chromium ahí («Playwright does not support chromium on ubuntu26.04-x64»). Al actualizar Playwright a una versión que lo soporte se puede volver a `ubuntu-latest`.
+
 Requisitos (una sola vez, ya hechos el 11-10-2026): repositorio público (o plan pago) y *Settings → Pages → Source: GitHub Actions*. Los cambios que solo tocan documentación (`docs/`, archivos `.md`) no vuelven a publicar la app, para no mostrar avisos de actualización innecesarios.
 
 Para publicar en otro hosting estático (Netlify, Cloudflare Pages, un dominio propio): `BASE_PATH=/ npm run build` y subir la carpeta `dist/`. Se necesita HTTPS (requisito del service worker y de WebCrypto).

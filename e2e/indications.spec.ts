@@ -72,13 +72,23 @@ test('indicaciones con formato para dos gatitos del mismo tutor', async ({ page 
     await select(care, '');
     await bar.getByRole('button', { name: 'Tabla' }).click();
     const add = dialog(page, 'Agregar tabla');
+    // La hoja pone el cursor en la primera celda al abrirse. La consulta se guarda sola un segundo después del último
+    // cambio: mientras tanto, el cursor no debe saltar desde la celda en que se está escribiendo.
+    await expect(add.getByLabel('Título de la columna 1')).toBeFocused();
+    const third = add.getByLabel('Título de la columna 3');
+    await third.fill('Alimento nuevo');
+    await page.waitForTimeout(1500);
+    await expect(third).toBeFocused();
+    await expect(add.getByLabel('Título de la columna 1')).toHaveValue('');
     const cells = [
       ['Día', 'Alimento antiguo', 'Alimento nuevo'],
       ['Día 1', '3/4', '1/4'],
       ['Día 2', '1/2', '1/2'],
     ];
     for (const [i, row] of cells.entries()) {
-      for (const [j, value] of row.entries()) await add.getByLabel(i === 0 ? `Título de la columna ${j + 1}` : `Fila ${i}, columna ${j + 1}`).fill(value);
+      for (const [j, value] of row.entries()) {
+        if (i > 0 || j < 2) await add.getByLabel(i === 0 ? `Título de la columna ${j + 1}` : `Fila ${i}, columna ${j + 1}`).fill(value);
+      }
     }
     await shot(page, testInfo, 'i01-agregar-tabla');
     await add.getByRole('button', { name: 'Agregar tabla' }).click();

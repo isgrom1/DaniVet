@@ -19,6 +19,7 @@ export const CHANGELOG: Release[] = [
       'Varios pacientes en las mismas indicaciones: al tocar «Indicaciones al tutor» puedes incluir a otros pacientes del mismo tutor. El PDF los muestra en una tabla con el peso de cada uno.',
       'El PDF de indicaciones ahora muestra el peso del paciente.',
       'Lo mismo en Documentos › Indicaciones posteriores a la atención: barra de formato y opción «También para».',
+      'Al escribir en una ventana emergente durante la consulta (por ejemplo, la calculadora de dosis o una tabla), el cursor ya no salta al primer campo cuando la consulta se guarda sola.',
     ],
   },
   {
