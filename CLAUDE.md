@@ -69,6 +69,9 @@ toca, la instala al bloquearse, después de guardar lo abierto. Al desbloquear s
 
 ## Versiones publicadas
 
+- 1.4.0: indicaciones con formato (subtítulos, negritas, viñetas y tablas) y para varios pacientes del mismo tutor con su peso;
+  las hojas emergentes ya no mueven el cursor al guardarse la consulta (ejecución n.º 12, 25-10-2026). Desde entonces los trabajos
+  con Playwright corren en `ubuntu-24.04` (ver `docs/tecnico.md`, sección 6).
 - 1.3.0: lectura opcional de informes con IA, con la clave propia de cada profesional (ejecución n.º 9, 21-10-2026).
 - 1.2.1: pegado de informes con unidades y rangos (ejecución n.º 8, 18-10-2026).
 - 1.2.0: dictado de la consulta, aviso de datos faltantes, valores de exámenes y su evolución (ejecución n.º 7, 18-10-2026).
