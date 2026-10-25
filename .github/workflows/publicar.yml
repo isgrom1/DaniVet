@@ -17,7 +17,8 @@ permissions:
 jobs:
   pruebas:
     name: Pruebas (tipos, unitarias, compilación y flujo en iPhone emulado)
-    runs-on: ubuntu-latest
+    # Ubuntu 24.04 fijo: desde octubre de 2026 «ubuntu-latest» es 26.04 y Playwright 1.56 no instala Chromium ahí.
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -105,7 +106,8 @@ jobs:
   verificar:
     name: Verificar la URL publicada desde Internet
     needs: publicar
-    runs-on: ubuntu-latest
+    # Igual que en «pruebas»: Playwright 1.56 no instala Chromium en Ubuntu 26.04.
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
       URL: ${{ needs.publicar.outputs.url }}
