@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useId,
+  useImperativeHandle,
   useLayoutEffect,
   useRef,
   type InputHTMLAttributes,
@@ -102,8 +103,12 @@ export const TextInput = forwardRef<HTMLInputElement, InputProps>(function TextI
 });
 
 /** Área de texto que crece con su contenido. */
-export function TextArea({ className, invalid, minRows = 3, id: idProp, ...rest }: TextareaHTMLAttributes<HTMLTextAreaElement> & { invalid?: boolean; minRows?: number }) {
+export const TextArea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<HTMLTextAreaElement> & { invalid?: boolean; minRows?: number }>(function TextArea(
+  { className, invalid, minRows = 3, id: idProp, ...rest },
+  outer,
+) {
   const ref = useRef<HTMLTextAreaElement>(null);
+  useImperativeHandle(outer, () => ref.current!, []);
   const id = useFieldId(idProp);
   useLayoutEffect(() => {
     const el = ref.current;
@@ -121,7 +126,7 @@ export function TextArea({ className, invalid, minRows = 3, id: idProp, ...rest 
       {...rest}
     />
   );
-}
+});
 
 export function Select({ className, invalid, children, id: idProp, ...rest }: SelectHTMLAttributes<HTMLSelectElement> & { invalid?: boolean }) {
   const id = useFieldId(idProp);

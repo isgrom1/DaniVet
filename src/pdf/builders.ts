@@ -1,8 +1,9 @@
-import { getRecord, getTable } from '@/data/store';
+import { getRecord, getTable, type Tables } from '@/data/store';
 import type { Attachment, Patient, Profile, Tutor } from '@/data/schema';
 import { CHARGE_CATEGORY, DEWORM_KIND, DOC_KIND, EXAM_STATUS, EXAM_TYPE, PAYMENT_STATUS, REPRO, SEX, TREAT_STATUS, VACCINE_ROUTE, BUDGET_STATUS } from '@/data/labels';
 import { UserError } from '@/data/errors';
-import { ageText, formatDate, formatDateTime } from '@/lib/dates';
+import { ageText, formatDate, formatDateTime, localDateOf } from '@/lib/dates';
+import { parseRichText, plainRichText } from '@/lib/richText';
 import { formatCLP, formatDecimal } from '@/lib/numbers';
 import { formatPhone } from '@/lib/phone';
 import { addressText } from '@/lib/maps';
@@ -56,6 +57,37 @@ function patientRows(p: Patient, tutor?: Tutor): Array<[string, string | undefin
 
 function footer(p?: Profile, extra?: string): string {
   return [extra, p?.documentFooter, generated(p)].filter(Boolean).join(' ');
+}
+
+/**
+ * Peso para las indicaciones: el registrado en la atención o, si no hay, el último registrado (con su fecha si es de
+ * otro día). Sin registro no se muestra ningún valor.
+ */
+export function weightText(t: Tables, patientId: string, day: string, attentionKg?: number): string | undefined {
+  if (attentionKg !== undefined) return `${formatDecimal(attentionKg)} kg`;
+  const lw = latestWeight(t, patientId);
+  if (!lw) return undefined;
+  return `${formatDecimal(lw.weightKg)} kg${lw.date !== day ? ` (${formatDate(lw.date)})` : ''}`;
+}
+
+/** «Pipu y Larry», «Pipu, Larry e Isis». */
+export function joinNames(names: string[]): string {
+  if (names.length <= 1) return names.join('');
+  const last = names[names.length - 1];
+  // Antes de un sonido «i» se usa «e» («Larry e Isis»), salvo en diptongo («y Hielo», «y Ian»).
+  const and = /^h?[ií](?![aeoáéó])/i.test(last.trim()) ? 'e' : 'y';
+  return `${names.slice(0, -1).join(', ')} ${and} ${last}`;
+}
+
+/** Sección con formato simple; si el texto empieza con un subtítulo propio, ese subtítulo reemplaza al de la sección. */
+function richSection(w: PdfWriter, title: string, body: string) {
+  if (parseRichText(body)[0]?.kind !== 'heading') w.heading(title);
+  w.rich(body);
+}
+
+/** Pacientes existentes además del principal (sin repetir), en el orden elegido. */
+function otherPatients(mainId: string, ids: string[] | undefined): Patient[] {
+  return [...new Set(ids ?? [])].filter((x) => x !== mainId).map((x) => getRecord('patients', x)).filter((p): p is Patient => !!p);
 }
 
 // ---------------------------------------------------------------------------
@@ -166,20 +198,26 @@ export async function consultationPdf(id: string): Promise<Blob> {
   for (const s of consultationSummary(t, c)) {
     if (s.title === 'Atención') continue;
     w.heading(s.title);
-    w.keyValues(s.rows.map((r) => [r.label, r.value]), 150);
+    w.keyValues(s.rows.map((r) => [r.label, r.rich ? plainRichText(r.value) : r.value]), 150);
   }
   if (c.status === 'voided') w.box(`Consulta anulada${c.voidReason ? `: ${c.voidReason}` : ''}.`, 'danger');
   await w.signature({ image: signature, name: c.professionalName || profile?.fullName, lines: professionalLines(profile), caption: signature ? SIGNATURE_CAPTION : undefined });
   return w.finish();
 }
 
-/** Indicaciones para el tutor: solo el plan y los cuidados (sin el detalle clínico completo). */
-export async function ownerInstructionsPdf(id: string): Promise<Blob> {
+/**
+ * Indicaciones para el tutor: solo el plan y los cuidados (sin el detalle clínico completo).
+ * `otherPatientIds`: otros pacientes del mismo tutor a los que la profesional también dirige estas indicaciones.
+ */
+export async function ownerInstructionsPdf(id: string, otherPatientIds: string[] = []): Promise<Blob> {
   const c = getRecord('consultations', id);
   if (!c) throw new UserError('Consulta no encontrada.');
   const patient = getRecord('patients', c.patientId);
   if (!patient) throw new UserError('Paciente no encontrado.');
+  const t = useDataStore.getState().tables;
   const tutor = getRecord('tutors', c.tutorId);
+  const others = otherPatients(patient.id, otherPatientIds);
+  const day = localDateOf(c.startedAt);
   const treatments = [...getTable('treatments').values()].filter((x) => x.consultationId === c.id);
   const dx = [...getTable('diagnoses').values()].filter((d) => d.consultationId === c.id && d.kind !== 'differential');
   const tpl = [...getTable('templates').values()].find((x) => x.kind === 'indications' && x.active);
@@ -188,13 +226,20 @@ export async function ownerInstructionsPdf(id: string): Promise<Blob> {
     paper: profile?.paperSize ?? 'letter',
     title: 'Indicaciones posteriores a la atención',
     docTitle: 'Indicaciones posteriores a la atención',
-    docSubtitle: `${patient.name} · ${formatDate(c.startedAt, 'long')}`,
+    docSubtitle: `${joinNames([patient, ...others].map((p) => p.name))} · ${formatDate(c.startedAt, 'long')}`,
     profile,
     logo,
     footerNote: footer(profile),
   });
+  if (others.length) {
+    w.dataTable(
+      ['Paciente', 'Peso'],
+      [[patient.name, weightText(t, patient.id, day, c.exam.weightKg) ?? 'Sin registro'], ...others.map((p) => [p.name, weightText(t, p.id, day) ?? 'Sin registro'])],
+    );
+  }
   w.keyValues([
-    ['Paciente', patient.name],
+    ['Paciente', others.length ? undefined : patient.name],
+    ['Peso', others.length ? undefined : weightText(t, patient.id, day, c.exam.weightKg)],
     ['Tutor/a', tutor?.fullName],
     ['Motivo', c.reason.main],
     ['Diagnóstico', dx.map((d) => d.name).join(', ')],
@@ -216,22 +261,14 @@ export async function ownerInstructionsPdf(id: string): Promise<Blob> {
       );
     });
   }
-  if (c.plan.homeCare) {
-    w.heading('Cuidados en casa');
-    w.text(c.plan.homeCare);
-  }
-  if (c.plan.ownerRecommendations) {
-    w.heading('Recomendaciones');
-    w.text(c.plan.ownerRecommendations);
-  }
-  if (c.plan.pendingTests) {
-    w.heading('Exámenes pendientes');
-    w.text(c.plan.pendingTests);
-  }
+  if (c.plan.homeCare?.trim()) richSection(w, 'Cuidados en casa', c.plan.homeCare);
+  if (c.plan.ownerRecommendations?.trim()) richSection(w, 'Recomendaciones', c.plan.ownerRecommendations);
+  if (c.plan.pendingTests?.trim()) richSection(w, 'Exámenes pendientes', c.plan.pendingTests);
   if (c.plan.controlDate) {
     w.heading('Próximo control');
     w.text(formatDate(c.plan.controlDate, 'long'));
   }
+  w.spacer(4);
   if (tpl?.fields.body) w.box(tpl.fields.body, 'info');
   w.box(`Contacto: ${[profile?.fullName, profile?.phone, profile?.email].filter(Boolean).join(' · ')}`, 'info');
   await w.signature({ image: signature, name: profile?.fullName, lines: professionalLines(profile), caption: signature ? SIGNATURE_CAPTION : undefined });
@@ -299,6 +336,7 @@ export async function documentPdf(id: string): Promise<Blob> {
   const t = useDataStore.getState().tables;
   const patient = d.patientId ? getRecord('patients', d.patientId) : undefined;
   const tutor = d.tutorId ? getRecord('tutors', d.tutorId) : patient ? primaryTutor(t, patient) : undefined;
+  const others = patient && d.kind === 'indications' ? otherPatients(patient.id, d.otherPatientIds) : [];
   const { profile, logo, signature } = await profileAssets();
   const w = await PdfWriter.create({
     paper: profile?.paperSize ?? 'letter',
@@ -310,7 +348,14 @@ export async function documentPdf(id: string): Promise<Blob> {
     watermark: d.status === 'draft' ? 'BORRADOR' : d.status === 'voided' ? 'ANULADO' : undefined,
     footerNote: footer(profile),
   });
-  if (patient) {
+  if (patient && others.length) {
+    w.heading('Identificación');
+    w.dataTable(
+      ['Paciente', 'Especie / raza', 'Peso'],
+      [patient, ...others].map((p) => [p.name, [speciesName(t, p.speciesId), p.breed].filter(Boolean).join(' / '), weightText(t, p.id, d.date) ?? 'Sin registro']),
+    );
+    w.keyValues(patientRows(patient, tutor).filter(([k]) => ['Tutor/a', 'RUT tutor/a', 'Teléfono'].includes(k)));
+  } else if (patient) {
     w.heading('Identificación');
     w.keyValues(patientRows(patient, tutor));
   }
@@ -318,7 +363,7 @@ export async function documentPdf(id: string): Promise<Blob> {
   const vars = {
     tutor: d.signature?.signerName || tutor?.fullName,
     rut_tutor: d.signature?.signerRut || tutor?.rut,
-    paciente: patient?.name,
+    paciente: patient ? joinNames([patient, ...others].map((p) => p.name)) : undefined,
     especie: patient ? speciesName(t, patient.speciesId).toLowerCase() : undefined,
     profesional: profile?.fullName,
     procedimiento: f.procedure,
@@ -359,13 +404,11 @@ export async function documentPdf(id: string): Promise<Blob> {
     vaccine_certificate: [['Detalle', 'notes']],
   };
   for (const [label, key] of sectionsByKind[d.kind] ?? []) {
-    if (!f[key]?.trim()) continue;
-    w.heading(label);
-    w.text(f[key]);
+    if (f[key]?.trim()) richSection(w, label, f[key]);
   }
   if (f.body?.trim()) {
     w.spacer(6);
-    w.text(fillTemplate(f.body, vars), { size: 10.5 });
+    w.rich(fillTemplate(f.body, vars));
   }
   if (d.status === 'voided') w.box(`Documento anulado${d.voidReason ? `: ${d.voidReason}` : ''}.`, 'danger');
   const needsOwner = d.kind === 'consent' || d.kind === 'refusal';
@@ -535,7 +578,7 @@ export async function patientHistoryPdf(patientId: string): Promise<Blob> {
     for (const s of consultationSummary(t, c)) {
       if (s.title === 'Atención') continue;
       w.text(s.title, { size: 9.5, font: w.bold });
-      w.keyValues(s.rows.map((r) => [r.label, r.value]), 150, 9.5);
+      w.keyValues(s.rows.map((r) => [r.label, r.rich ? plainRichText(r.value) : r.value]), 150, 9.5);
     }
   }
   const vacs = [...t.vaccinations.values()].filter((v) => v.patientId === patientId && v.status === 'applied').sort((a, b) => a.date.localeCompare(b.date));

@@ -268,6 +268,7 @@ Relaciones (claves foráneas)
 - consultations.patientId -> patients.id ; consultations.tutorId -> tutors.id ; consultations.appointmentId -> appointments.id
 - diagnoses.consultationId / treatments.consultationId -> consultations.id
 - prescriptions, vaccinations, dewormings, exams, documents, weights: patientId -> patients.id (y consultationId cuando corresponde)
+- documents.otherPatientIds[] -> patients.id (indicaciones dirigidas también a otros pacientes del mismo tutor)
 - exams.values[]: valores del examen (analyte = código del valor, refLow/refHigh = rango informado por el laboratorio)
 - attachments.blobId -> archivo en adjuntos/ ; attachments.patientId / consultationId / examId / documentId
 - charges.tutorId -> tutors.id ; payments.chargeId -> charges.id

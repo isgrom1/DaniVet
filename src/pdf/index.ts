@@ -4,7 +4,7 @@ const load = () => import('./builders');
 export const pdf = {
   prescription: async (id: string) => (await load()).prescriptionPdf(id),
   consultation: async (id: string) => (await load()).consultationPdf(id),
-  ownerInstructions: async (id: string) => (await load()).ownerInstructionsPdf(id),
+  ownerInstructions: async (id: string, otherPatientIds: string[] = []) => (await load()).ownerInstructionsPdf(id, otherPatientIds),
   vaccineCertificate: async (patientId: string) => (await load()).vaccineCertificatePdf(patientId),
   document: async (id: string) => (await load()).documentPdf(id),
   budget: async (id: string) => (await load()).budgetPdf(id),

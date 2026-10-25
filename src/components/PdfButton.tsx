@@ -9,6 +9,7 @@ import { canShareFiles, isIOS, isStandalone } from '@/lib/platform';
 /**
  * Genera un PDF y ofrece compartirlo (hoja nativa de iOS), abrirlo o descargarlo.
  * Se genera primero y luego se comparte con un segundo toque: Safari exige que compartir sea una acción directa.
+ * `ask`: hoja previa con opciones del documento (por ejemplo, qué pacientes incluir) antes de generarlo.
  */
 export function PdfButton({
   make,
@@ -20,6 +21,7 @@ export function PdfButton({
   icon,
   note,
   onGenerated,
+  ask,
 }: {
   make: () => Promise<Blob>;
   fileName: string;
@@ -30,9 +32,11 @@ export function PdfButton({
   icon?: ReactNode;
   note?: ReactNode;
   onGenerated?: () => void;
+  ask?: { title: string; body: ReactNode; confirmLabel: string };
 }) {
   const [busy, setBusy] = useState(false);
   const [blob, setBlob] = useState<Blob | null>(null);
+  const [asking, setAsking] = useState(false);
   const generate = async () => {
     setBusy(true);
     try {
@@ -62,9 +66,31 @@ export function PdfButton({
   const showOpen = !(shareable && isIOS() && isStandalone());
   return (
     <>
-      <Button variant={variant} size={size} block={block} loading={busy} onClick={generate} icon={icon ?? <FileText className="size-4" />}>
+      <Button variant={variant} size={size} block={block} loading={busy} onClick={ask ? () => setAsking(true) : generate} icon={icon ?? <FileText className="size-4" />}>
         {label}
       </Button>
+      {ask && asking && (
+        <Sheet
+          open
+          onClose={() => setAsking(false)}
+          title={ask.title}
+          footer={
+            <Button
+              block
+              size="lg"
+              icon={<FileText className="size-5" />}
+              onClick={() => {
+                setAsking(false);
+                void generate();
+              }}
+            >
+              {ask.confirmLabel}
+            </Button>
+          }
+        >
+          {ask.body}
+        </Sheet>
+      )}
       {blob && (
         <Sheet open onClose={() => setBlob(null)} title="Documento listo">
           <div className="space-y-3">

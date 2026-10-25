@@ -75,6 +75,7 @@ export const REFS: Partial<Record<TableName, Array<[path: string, target: TableN
   ],
   documents: [
     ['patientId', 'patients'],
+    ['otherPatientIds[]', 'patients'],
     ['tutorId', 'tutors'],
     ['consultationId', 'consultations'],
     ['scanAttachmentId', 'attachments'],

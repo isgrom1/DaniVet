@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { PDFDocument } from 'pdf-lib';
 import { insert, update } from '@/data/repo';
+import { IntegrityError } from '@/data/errors';
+import { allOf } from '@/data/store';
 import { freshAccount, makePatient, makeTutor } from '@/test/helpers';
 import { extractPdfText } from '@/test/pdfText';
 import { todayISO } from '@/lib/dates';
-import { prescriptionPdf, receiptPdf, vaccineCertificatePdf } from './builders';
+import { newConsultation } from '@/features/consultations/model';
+import { consultationPdf, documentPdf, joinNames, ownerInstructionsPdf, prescriptionPdf, receiptPdf, vaccineCertificatePdf } from './builders';
 import { sanitize } from './engine';
 
 async function text(blob: Blob) {
@@ -82,5 +85,100 @@ describe('documentos PDF', () => {
   it('reemplaza caracteres que la fuente estándar no admite', () => {
     expect(sanitize('≥ 5 → ok ✓ á ñ ü ° µ')).toBe('>= 5 -> ok v á ñ ü ° µ');
     expect(sanitize('emoji 🐶')).toBe('emoji ?');
+  });
+});
+
+const CUIDADOS = [
+  '## 1. Tratamiento de diarrea líquida',
+  '• Cambio de alimento a **Royal Canin Gastrointestinal Kitten**. Mantener la dieta durante **21 días**.',
+  '• Realizar la transición de alimento en 4 días:',
+  'Día | Alimento antiguo | Alimento nuevo',
+  'Día 1 | 3/4 | 1/4',
+  'Día 2 | 1/2 | 1/2',
+  'Día 3 | 1/4 | 3/4',
+  'Día 4 | — | 100%',
+  '• Ofrecer **AL DÍA 50 gramos** de pellet.',
+].join('\n');
+
+async function kittens(homeCare = CUIDADOS) {
+  await freshAccount();
+  const cat = allOf('species').find((s) => s.builtin === 'cat')!.id;
+  const t = await makeTutor('Tutora de prueba');
+  const [pipu, larry, mora] = [await makePatient(t.id, 'Pipu'), await makePatient(t.id, 'Larry'), await makePatient(t.id, 'Mora')];
+  for (const p of [pipu, larry, mora]) await update('patients', p.id, { speciesId: cat });
+  // Larry tiene un peso de otro día; Mora no tiene peso registrado.
+  await insert('weights', { patientId: larry.id, date: '2026-10-20', weightKg: 1.58, source: 'manual' });
+  const base = newConsultation({ patientId: pipu.id, tutorId: t.id, professionalName: 'Dra. Prueba', startedAt: '2026-10-25T14:00:00.000Z' });
+  const c = await insert('consultations', {
+    ...base,
+    status: 'final',
+    finalizedAt: base.startedAt,
+    reason: { main: 'Diarrea líquida' },
+    exam: { ...base.exam, weightKg: 1.21 },
+    plan: { homeCare, ownerRecommendations: '**Opciones de productos:**\n- Interna: Mebermic, Drontal.' },
+  });
+  return { t, pipu, larry, mora, c };
+}
+
+describe('indicaciones al tutor', () => {
+  it('muestra el peso del paciente y dibuja subtítulos, negritas, viñetas y tablas sin marcas', async () => {
+    const { c } = await kittens();
+    const pdf = await text(await ownerInstructionsPdf(c.id));
+    for (const s of ['Indicaciones posteriores a la atención', 'Pipu ·', 'Peso 1,21 kg', 'Motivo Diarrea líquida', '1. Tratamiento de diarrea líquida', 'Royal Canin Gastrointestinal Kitten', 'Día Alimento antiguo Alimento nuevo', 'Día 1 3/4 1/4', 'Día 4 — 100%', 'AL DÍA 50 gramos', 'Opciones de productos:', 'Interna: Mebermic, Drontal.']) {
+      expect(pdf.text).toContain(s);
+    }
+    expect(pdf.text).not.toMatch(/\*\*|##|\|/);
+    // El informe clínico muestra el mismo texto sin marcas de formato.
+    const report = await text(await consultationPdf(c.id));
+    expect(report.text).toContain('Royal Canin Gastrointestinal Kitten');
+    expect(report.text).not.toMatch(/\*\*|##/);
+  });
+
+  it('incluye a otros pacientes del mismo tutor en un solo PDF, con su peso', async () => {
+    const { c, larry, mora } = await kittens();
+    const pdf = await text(await ownerInstructionsPdf(c.id, [larry.id, mora.id, c.patientId]));
+    for (const s of ['Pipu, Larry y Mora ·', 'Paciente Peso', 'Pipu 1,21 kg', 'Larry 1,58 kg (20-10-2026)', 'Mora Sin registro', 'Tutor/a Tutora de prueba']) {
+      expect(pdf.text).toContain(s);
+    }
+  });
+
+  it('el documento de indicaciones puede incluir a otros pacientes del mismo tutor', async () => {
+    const { t, pipu, larry } = await kittens();
+    const d = await insert('documents', {
+      kind: 'indications',
+      patientId: pipu.id,
+      otherPatientIds: [larry.id],
+      tutorId: t.id,
+      title: 'Indicaciones posteriores a la atención',
+      date: '2026-10-25',
+      status: 'issued',
+      fields: { instructions: CUIDADOS, body: 'Indicaciones para {paciente}.' },
+    });
+    const pdf = await text(await documentPdf(d.id));
+    for (const s of ['Paciente Especie / raza Peso', 'Pipu Gato', 'Larry Gato 1,58 kg (20-10-2026)', 'Día 2 1/2 1/2', 'Indicaciones para Pipu y Larry.']) {
+      expect(pdf.text).toContain(s);
+    }
+    expect(pdf.text).not.toMatch(/\*\*|##|\|/);
+    await expect(insert('documents', { kind: 'indications', patientId: pipu.id, otherPatientIds: ['no-existe'], title: 'X', date: '2026-10-25', status: 'draft', fields: {} })).rejects.toBeInstanceOf(IntegrityError);
+  });
+
+  it('una tabla ancha reparte el espacio sin cortar palabras', async () => {
+    const wide = [
+      'Producto | Tipo | Frecuencia | Observaciones',
+      `Revolution Plus | Desparasitación interna y externa | Cada 15 días, por 4 dosis | ${'Elegir la presentación según el peso del paciente y repetir. '.repeat(3)}`,
+      'Bravecto | Externa | Cada 3 meses | —',
+    ].join('\n');
+    const { c } = await kittens(wide);
+    const pdf = await text(await ownerInstructionsPdf(c.id));
+    for (const s of ['Producto Tipo Frecuencia Observaciones', 'Desparasitación', 'Revolution Plus', 'Bravecto Externa Cada 3 meses']) expect(pdf.text).toContain(s);
+  });
+
+  it('une los nombres como en español', () => {
+    expect(joinNames(['Pipu'])).toBe('Pipu');
+    expect(joinNames(['Pipu', 'Larry'])).toBe('Pipu y Larry');
+    expect(joinNames(['Pipu', 'Larry', 'Isis'])).toBe('Pipu, Larry e Isis');
+    expect(joinNames(['Pipu', 'Hilda'])).toBe('Pipu e Hilda');
+    expect(joinNames(['Pipu', 'Hielo'])).toBe('Pipu y Hielo');
+    expect(joinNames(['Pipu', 'Ian'])).toBe('Pipu y Ian');
   });
 });

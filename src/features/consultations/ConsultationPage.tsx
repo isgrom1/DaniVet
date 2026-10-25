@@ -6,17 +6,19 @@ import { Button, LinkButton } from '@/components/Button';
 import { Badge, Card, List, ListRow, Notice, Section } from '@/components/Card';
 import { PdfButton } from '@/components/PdfButton';
 import { Sheet, promptDialog, toast } from '@/components/overlay';
-import { Segmented } from '@/components/form';
+import { Checkbox, Segmented } from '@/components/form';
+import { RichTextView } from '@/components/RichText';
 import { useTables } from '@/data/hooks';
 import { update } from '@/data/repo';
 import { friendlyError } from '@/data/errors';
 import type { Consultation, ConsultationVersion, Diagnosis, Treatment } from '@/data/schema';
 import { AUDIT_ACTION, CONSULT_KIND, CONSULT_STATUS, DOC_KIND, EXAM_STATUS, EXAM_STATUS_TONE, EXAM_TYPE, TABLE_LABEL, TREAT_STATUS } from '@/data/labels';
 import { formatDate, formatDateTime, todayISO } from '@/lib/dates';
+import { formatDecimal } from '@/lib/numbers';
 import { safeFileName } from '@/lib/share';
 import { AttachmentGrid, AttachmentPicker } from '@/features/attachments/AttachmentViews';
 import { AlertsPanel } from '@/features/patients/AlertsPanel';
-import { patientAlerts } from '@/features/patients/selectors';
+import { latestWeight, patientAlerts, patientsOfTutor, speciesName } from '@/features/patients/selectors';
 import { pdf } from '@/pdf';
 import { ConsultationEditor } from './ConsultationEditor';
 import { consultationSummary, type SummarySection } from './summary';
@@ -52,13 +54,60 @@ export function SummaryCards({ sections }: { sections: SummarySection[] }) {
             {s.rows.map((r, i) => (
               <div key={i}>
                 <dt className="text-sm font-semibold text-ink-600">{r.label}</dt>
-                <dd className="whitespace-pre-wrap text-[15px] text-ink-900">{r.value}</dd>
+                <dd className="whitespace-pre-wrap text-[15px] text-ink-900">{r.rich ? <RichTextView text={r.value} /> : r.value}</dd>
               </div>
             ))}
           </dl>
         </Card>
       ))}
     </div>
+  );
+}
+
+/**
+ * «Indicaciones al tutor». Si el tutor tiene otros pacientes activos, la profesional puede incluirlos en el mismo
+ * PDF (por ejemplo, gatitos de una camada con las mismas indicaciones); ninguno viene marcado.
+ */
+function OwnerInstructionsButton({ c }: { c: Consultation }) {
+  const tables = useTables();
+  const patient = tables.patients.get(c.patientId);
+  const others = patientsOfTutor(tables, c.tutorId).filter((p) => p.id !== c.patientId && p.status === 'active');
+  const [chosen, setChosen] = useState<string[]>([]);
+  const selected = others.filter((p) => chosen.includes(p.id));
+  const describe = (id: string, speciesId: string) => {
+    const w = latestWeight(tables, id);
+    return [speciesName(tables, speciesId), w ? `último peso ${formatDecimal(w.weightKg)} kg (${formatDate(w.date)})` : 'sin peso registrado'].filter(Boolean).join(' · ');
+  };
+  return (
+    <PdfButton
+      make={() => pdf.ownerInstructions(c.id, selected.map((p) => p.id))}
+      fileName={`indicaciones-${safeFileName([patient?.name ?? 'paciente', ...selected.map((p) => p.name)].join(' y '))}-${c.startedAt.slice(0, 10)}.pdf`}
+      label="Indicaciones al tutor"
+      icon={<ClipboardList className="size-4" />}
+      ask={
+        others.length
+          ? {
+              title: 'Indicaciones al tutor',
+              confirmLabel: 'Generar PDF',
+              body: (
+                <div className="space-y-2">
+                  <p className="text-[15px] text-ink-700">¿Para quiénes son estas indicaciones? Los pacientes que marques aparecen en el mismo PDF, con su peso.</p>
+                  <Checkbox checked disabled onChange={() => undefined} label={patient?.name ?? 'Paciente'} description="Paciente de esta consulta" />
+                  {others.map((p) => (
+                    <Checkbox
+                      key={p.id}
+                      checked={chosen.includes(p.id)}
+                      onChange={(v) => setChosen((prev) => (v ? [...prev, p.id] : prev.filter((x) => x !== p.id)))}
+                      label={p.name}
+                      description={describe(p.id, p.speciesId)}
+                    />
+                  ))}
+                </div>
+              ),
+            }
+          : undefined
+      }
+    />
   );
 }
 
@@ -124,7 +173,7 @@ function ConsultationView({ c }: { c: Consultation }) {
         {c.status === 'final' && (
           <div className="grid grid-cols-2 gap-2">
             <PdfButton make={() => pdf.consultation(c.id)} fileName={`informe-${safeFileName(patient?.name ?? 'paciente')}-${c.startedAt.slice(0, 10)}.pdf`} label="Informe clínico" icon={<FileText className="size-4" />} />
-            <PdfButton make={() => pdf.ownerInstructions(c.id)} fileName={`indicaciones-${safeFileName(patient?.name ?? 'paciente')}-${c.startedAt.slice(0, 10)}.pdf`} label="Indicaciones al tutor" icon={<ClipboardList className="size-4" />} />
+            <OwnerInstructionsButton c={c} />
             <LinkButton to={`/consulta?patientId=${c.patientId}&followUpOf=${c.id}`} variant="soft" icon={<Repeat className="size-4" />}>
               Registrar control
             </LinkButton>

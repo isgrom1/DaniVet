@@ -720,6 +720,8 @@ export const documentSchema = z.object({
   ...base,
   kind: documentKind,
   patientId: optRef,
+  /** Indicaciones: otros pacientes del mismo tutor a los que también se dirige el documento. */
+  otherPatientIds: z.array(ref).optional(),
   tutorId: optRef,
   consultationId: optRef,
   title: z.string().min(1).max(300),

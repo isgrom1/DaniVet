@@ -4,10 +4,11 @@ import { Ban, FileSignature, FileText, PenLine, UserRound } from 'lucide-react';
 import { PageHeader, Page, StickyActions } from '@/components/layout';
 import { Button } from '@/components/Button';
 import { Badge, Card, List, ListRow, Notice, Section } from '@/components/Card';
-import { DateInput, Field, Segmented, TextArea, TextInput } from '@/components/form';
+import { Checkbox, DateInput, Field, FieldGroup, Segmented, TextArea, TextInput } from '@/components/form';
 import { DraftBanner } from '@/components/DraftBanner';
 import { PatientPickerSheet } from '@/components/pickers';
 import { PdfButton } from '@/components/PdfButton';
+import { RichTextArea } from '@/components/RichText';
 import { confirmDialog, promptDialog, toast } from '@/components/overlay';
 import { useTables } from '@/data/hooks';
 import { batch, update } from '@/data/repo';
@@ -15,16 +16,18 @@ import { friendlyError } from '@/data/errors';
 import type { DocumentKind, VetDocument } from '@/data/schema';
 import { DOC_KIND } from '@/data/labels';
 import { formatDate, formatDateTime, todayISO } from '@/lib/dates';
+import { formatDecimal } from '@/lib/numbers';
 import { safeFileName } from '@/lib/share';
 import { useFormDraft } from '@/lib/useFormDraft';
 import { AttachmentGrid, AttachmentPicker } from '@/features/attachments/AttachmentViews';
 import { saveAttachment } from '@/features/attachments/attachments';
 import { consultationSummary, summaryAsText } from '@/features/consultations/summary';
-import { primaryTutor } from '@/features/patients/selectors';
+import { latestWeight, patientsOfTutor, primaryTutor, speciesName } from '@/features/patients/selectors';
 import { pdf } from '@/pdf';
 import { SignaturePad } from './SignaturePad';
 
-const FIELDS: Record<DocumentKind, Array<{ key: string; label: string; required?: boolean; rows?: number }>> = {
+/** `rich`: con barra de formato (subtítulos, negritas, viñetas y tablas) que se ve en el PDF. */
+const FIELDS: Record<DocumentKind, Array<{ key: string; label: string; required?: boolean; rows?: number; rich?: boolean }>> = {
   consent: [
     { key: 'procedure', label: 'Procedimiento a realizar', required: true, rows: 2 },
     { key: 'risks', label: 'Riesgos y posibles complicaciones informados', rows: 3 },
@@ -51,8 +54,8 @@ const FIELDS: Record<DocumentKind, Array<{ key: string; label: string; required?
     { key: 'clinical', label: 'Sospecha clínica / antecedentes', rows: 3 },
   ],
   indications: [
-    { key: 'instructions', label: 'Indicaciones', required: true, rows: 5 },
-    { key: 'alarms', label: 'Signos de alarma', rows: 3 },
+    { key: 'instructions', label: 'Indicaciones', required: true, rows: 5, rich: true },
+    { key: 'alarms', label: 'Signos de alarma', rows: 3, rich: true },
     { key: 'control', label: 'Próximo control', rows: 1 },
   ],
   clinical_report: [{ key: 'report', label: 'Informe', required: true, rows: 10 }],
@@ -64,6 +67,8 @@ const TEMPLATE_KIND: Partial<Record<DocumentKind, string>> = { consent: 'consent
 interface FormState {
   kind?: DocumentKind;
   patientId: string;
+  /** Indicaciones: otros pacientes del mismo tutor incluidos en el documento. */
+  otherPatientIds?: string[];
   title: string;
   date: string;
   fields: Record<string, string>;
@@ -121,7 +126,7 @@ function DocumentEditor({ doc }: { doc?: VetDocument }) {
   };
 
   const form = useFormDraft<FormState>(`form:document:${doc?.id ?? `new:${params.get('patientId') ?? ''}:${consultationId ?? ''}:${params.get('kind') ?? ''}`}`, () => {
-    if (doc) return { kind: doc.kind, patientId: doc.patientId ?? '', title: doc.title, date: doc.date, fields: doc.fields };
+    if (doc) return { kind: doc.kind, patientId: doc.patientId ?? '', otherPatientIds: doc.otherPatientIds ?? [], title: doc.title, date: doc.date, fields: doc.fields };
     const kind = (params.get('kind') as DocumentKind | null) ?? undefined;
     const p = kind ? prefill(kind) : { fields: {} };
     return {
@@ -142,6 +147,13 @@ function DocumentEditor({ doc }: { doc?: VetDocument }) {
   const [signerRut, setSignerRut] = useState(doc?.signature?.signerRut ?? '');
   const patient = tables.patients.get(f.patientId);
   const tutor = patient ? primaryTutor(tables, patient) : undefined;
+  const chosenOthers = f.otherPatientIds ?? [];
+  // Indicaciones: otros pacientes activos del mismo tutor (o ya incluidos en el documento).
+  const siblings =
+    f.kind === 'indications' && patient && tutor
+      ? patientsOfTutor(tables, tutor.id).filter((p) => p.id !== patient.id && (p.status === 'active' || chosenOthers.includes(p.id)))
+      : [];
+  const included = siblings.filter((p) => chosenOthers.includes(p.id));
   const scans = useMemo(() => (doc ? [...tables.attachments.values()].filter((a) => a.documentId === doc.id && a.kind !== 'signature') : []), [tables, doc]);
   const sigAtt = doc?.signature?.attachmentId ? tables.attachments.get(doc.signature.attachmentId) : undefined;
 
@@ -193,6 +205,7 @@ function DocumentEditor({ doc }: { doc?: VetDocument }) {
       const data = {
         kind,
         patientId: f.patientId,
+        otherPatientIds: included.length ? included.map((p) => p.id) : undefined,
         tutorId: tutor?.id,
         consultationId,
         title: f.title.trim(),
@@ -265,7 +278,15 @@ function DocumentEditor({ doc }: { doc?: VetDocument }) {
         )}
         {doc?.status === 'voided' && <Notice tone="danger">Anulado: {doc.voidReason}</Notice>}
         {f.prefilledFrom && !locked && <Notice tone="warning">{f.prefilledFrom}</Notice>}
-        {doc && <PdfButton make={pdfMake} fileName={`${safeFileName(DOC_KIND[kind])}-${safeFileName(patient?.name ?? '')}-${f.date}.pdf`} label="Ver / compartir PDF" variant={doc.status === 'issued' ? 'primary' : 'secondary'} block />}
+        {doc && (
+          <PdfButton
+            make={pdfMake}
+            fileName={`${safeFileName(DOC_KIND[kind])}-${safeFileName([patient?.name ?? '', ...included.map((p) => p.name)].join(' y '))}-${f.date}.pdf`}
+            label="Ver / compartir PDF"
+            variant={doc.status === 'issued' ? 'primary' : 'secondary'}
+            block
+          />
+        )}
 
         <Section title="Datos del documento">
           <Card className="space-y-4">
@@ -274,6 +295,23 @@ function DocumentEditor({ doc }: { doc?: VetDocument }) {
               <span className="flex-1 font-semibold">{patient ? `${patient.name} · ${tutor?.fullName ?? ''}` : 'Elegir paciente'}</span>
             </button>
             {tried && needsPatient && <p className="text-sm font-medium text-red-700">Elige el paciente.</p>}
+            {siblings.length > 0 && (
+              <FieldGroup label="También para" hint="Otros pacientes del mismo tutor con estas mismas indicaciones. Aparecen en el PDF, con su peso.">
+                {siblings.map((p) => {
+                  const w = latestWeight(tables, p.id);
+                  return (
+                    <Checkbox
+                      key={p.id}
+                      checked={chosenOthers.includes(p.id)}
+                      disabled={locked}
+                      onChange={(v) => form.setField('otherPatientIds', v ? [...chosenOthers, p.id] : chosenOthers.filter((x) => x !== p.id))}
+                      label={p.name}
+                      description={`${speciesName(tables, p.speciesId)} · ${w ? `último peso ${formatDecimal(w.weightKg)} kg (${formatDate(w.date)})` : 'sin peso registrado'}`}
+                    />
+                  );
+                })}
+              </FieldGroup>
+            )}
             <div className="grid grid-cols-[1fr_auto] gap-3">
               <Field label="Título">
                 <TextInput value={f.title} onChange={(e) => form.setField('title', e.target.value)} disabled={locked} />
@@ -283,8 +321,18 @@ function DocumentEditor({ doc }: { doc?: VetDocument }) {
               </Field>
             </div>
             {FIELDS[kind].map((x) => (
-              <Field key={x.key} label={x.label} required={x.required} error={tried && x.required && !f.fields[x.key]?.trim() ? 'Campo obligatorio' : null}>
-                <TextArea value={f.fields[x.key] ?? ''} onChange={(e) => form.setField('fields', { ...f.fields, [x.key]: e.target.value })} minRows={x.rows ?? 2} disabled={locked} />
+              <Field
+                key={x.key}
+                label={x.label}
+                required={x.required}
+                error={tried && x.required && !f.fields[x.key]?.trim() ? 'Campo obligatorio' : null}
+                hint={x.rich && !locked && x.key === FIELDS[kind][0].key ? 'Con la barra puedes agregar subtítulos, negritas, viñetas y tablas: así se verán en el PDF.' : undefined}
+              >
+                {x.rich ? (
+                  <RichTextArea value={f.fields[x.key] ?? ''} onChange={(v) => form.setField('fields', { ...f.fields, [x.key]: v })} minRows={x.rows ?? 2} disabled={locked} />
+                ) : (
+                  <TextArea value={f.fields[x.key] ?? ''} onChange={(e) => form.setField('fields', { ...f.fields, [x.key]: e.target.value })} minRows={x.rows ?? 2} disabled={locked} />
+                )}
               </Field>
             ))}
             {kind !== 'vaccine_certificate' && kind !== 'clinical_report' && (
@@ -361,7 +409,7 @@ function DocumentEditor({ doc }: { doc?: VetDocument }) {
         <PatientPickerSheet
           onClose={() => setPicker(false)}
           onPick={(p) => {
-            form.setField('patientId', p.id);
+            form.set((prev) => ({ ...prev, patientId: p.id, otherPatientIds: [] }));
             setPicker(false);
           }}
         />

@@ -160,7 +160,7 @@ export function patientTimeline(t: Tables, patientId: string): TimelineEvent[] {
     });
   }
   for (const d of t.documents.values()) {
-    if (d.patientId !== patientId) continue;
+    if (d.patientId !== patientId && !d.otherPatientIds?.includes(patientId)) continue;
     ev.push({ kind: 'document', id: d.id, date: d.date, title: `${DOC_KIND[d.kind]}`, subtitle: d.title, to: `/documentos/${d.id}`, status: d.status });
   }
   for (const w of t.weights.values()) {

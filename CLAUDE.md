@@ -53,10 +53,12 @@ Para deshacer una versión: `git revert` del commit, subir la versión (la app c
 - `src/features/exams/`: exámenes, catálogo de valores sin rangos propios (`analytes.ts`), evolución (`trends.ts`, `LabTrends.tsx`, `LabChart.tsx`).
 - `src/features/ai/`: lectura opcional de informes con IA (clave cifrada `aiKey.ts`, envío a Claude `labReader.ts`, panel `AiReportPanel.tsx`);
   activación en `src/features/settings/AiSettings.tsx`.
-- `src/lib/`: cifrado, IndexedDB, fechas, RUT, teléfonos, compartir archivos, service worker (`sw.ts`).
+- `src/lib/`: cifrado, IndexedDB, fechas, RUT, teléfonos, compartir archivos, service worker (`sw.ts`), formato simple de las
+  indicaciones (`richText.ts`: subtítulos, negritas, viñetas y tablas; barra en `src/components/RichText.tsx`).
 - `src/pdf/`: documentos PDF (pdf-lib, se carga solo al generar).
 - `src/changelog.ts`: novedades por versión.
-- `e2e/acceptance.spec.ts`: flujo de aceptación completo en tres tamaños de iPhone emulados; `e2e/voice-labs.spec.ts`: dictado y valores de exámenes; `e2e/ai-reader.spec.ts`: lectura con IA (API de Anthropic simulada).
+- `e2e/acceptance.spec.ts`: flujo de aceptación completo en tres tamaños de iPhone emulados; `e2e/voice-labs.spec.ts`: dictado y valores de exámenes; `e2e/ai-reader.spec.ts`: lectura con IA (API de Anthropic simulada); `e2e/indications.spec.ts`: indicaciones con formato y para
+  varios pacientes del mismo tutor.
 
 ## Actualizaciones (cómo llegan a cada teléfono)
 

@@ -413,8 +413,8 @@ export function PlanSection() {
           Crear receta con estos medicamentos
         </NavButton>
       )}
-      <CText path="plan.homeCare" label="Cuidados domiciliarios" />
-      <CText path="plan.ownerRecommendations" label="Recomendaciones al tutor" />
+      <CText path="plan.homeCare" label="Cuidados domiciliarios" formatting rows={3} hint="Con la barra puedes agregar subtítulos, negritas, viñetas y tablas: así se verán en las indicaciones al tutor." />
+      <CText path="plan.ownerRecommendations" label="Recomendaciones al tutor" formatting rows={3} />
       <CText path="plan.pendingTests" label="Exámenes pendientes" />
       <div className="grid gap-4 sm:grid-cols-2">
         <CText path="plan.referralTo" label="Derivación a (profesional o centro)" rows={1} />

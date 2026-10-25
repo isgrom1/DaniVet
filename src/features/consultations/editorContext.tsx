@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { CircleCheck } from 'lucide-react';
 import { DecimalInput, Field, ProvenanceTag, TextArea } from '@/components/form';
+import { RichTextArea } from '@/components/RichText';
 import type { Consultation, Patient, Species } from '@/data/schema';
 import { formatDecimal, parseDecimal } from '@/lib/numbers';
 import { getPath } from '@/lib/objects';
@@ -41,13 +42,17 @@ export function ProvenanceFor({ path }: { path: string }) {
   );
 }
 
-/** Campo de texto de la consulta enlazado a una ruta del registro. */
-export function CText({ path, label, hint, rows = 2, placeholder }: { path: string; label: string; hint?: ReactNode; rows?: number; placeholder?: string }) {
+/** Campo de texto de la consulta enlazado a una ruta del registro (`formatting`: con barra de formato para el PDF). */
+export function CText({ path, label, hint, rows = 2, placeholder, formatting }: { path: string; label: string; hint?: ReactNode; rows?: number; placeholder?: string; formatting?: boolean }) {
   const { c, setC } = useEditor();
   const value = (getPath(c, path) as string | undefined) ?? '';
   return (
     <Field label={label} hint={hint} tag={<ProvenanceFor path={path} />}>
-      <TextArea value={value} onChange={(e) => setC(path, e.target.value)} minRows={rows} placeholder={placeholder} aria-label={label} />
+      {formatting ? (
+        <RichTextArea value={value} onChange={(v) => setC(path, v)} minRows={rows} placeholder={placeholder} aria-label={label} />
+      ) : (
+        <TextArea value={value} onChange={(e) => setC(path, e.target.value)} minRows={rows} placeholder={placeholder} aria-label={label} />
+      )}
     </Field>
   );
 }

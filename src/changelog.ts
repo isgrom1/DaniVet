@@ -12,6 +12,16 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.4.0',
+    date: '2026-10-25',
+    items: [
+      'Indicaciones con formato: en «Cuidados domiciliarios» y «Recomendaciones al tutor» hay una barra para agregar subtítulos, negritas, viñetas y tablas (por ejemplo, la transición de alimento día por día). Así se ven en el PDF.',
+      'Varios pacientes en las mismas indicaciones: al tocar «Indicaciones al tutor» puedes incluir a otros pacientes del mismo tutor. El PDF los muestra en una tabla con el peso de cada uno.',
+      'El PDF de indicaciones ahora muestra el peso del paciente.',
+      'Lo mismo en Documentos › Indicaciones posteriores a la atención: barra de formato y opción «También para».',
+    ],
+  },
+  {
     version: '1.3.0',
     date: '2026-10-21',
     items: [

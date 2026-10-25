@@ -7,7 +7,8 @@ import { formatDecimal } from '@/lib/numbers';
 
 export interface SummarySection {
   title: string;
-  rows: Array<{ label: string; value: string }>;
+  /** `rich`: el valor puede tener formato simple (subtítulos, viñetas, negritas y tablas; ver `lib/richText`). */
+  rows: Array<{ label: string; value: string; rich?: boolean }>;
 }
 
 const v = (s?: string | null) => (s && s.trim() ? s.trim() : '');
@@ -17,8 +18,8 @@ export function consultationSummary(t: Tables, c: Consultation, diagnoses?: Diag
   const dx = diagnoses ?? [...t.diagnoses.values()].filter((d) => d.consultationId === c.id);
   const tx = treatments ?? [...t.treatments.values()].filter((x) => x.consultationId === c.id);
   const out: SummarySection[] = [];
-  const push = (title: string, rows: Array<[string, string | undefined | null]>) => {
-    const filtered = rows.filter(([, val]) => v(val)).map(([label, val]) => ({ label, value: v(val) }));
+  const push = (title: string, rows: Array<[string, string | undefined | null, rich?: boolean]>) => {
+    const filtered = rows.filter(([, val]) => v(val)).map(([label, val, rich]) => ({ label, value: v(val), ...(rich ? { rich } : {}) }));
     if (filtered.length) out.push({ title, rows: filtered });
   };
 
@@ -96,8 +97,8 @@ export function consultationSummary(t: Tables, c: Consultation, diagnoses?: Diag
         )
         .join('\n'),
     ],
-    ['Cuidados domiciliarios', c.plan.homeCare],
-    ['Recomendaciones al tutor', c.plan.ownerRecommendations],
+    ['Cuidados domiciliarios', c.plan.homeCare, true],
+    ['Recomendaciones al tutor', c.plan.ownerRecommendations, true],
     ['Exámenes pendientes', c.plan.pendingTests],
     ['Derivación', [c.plan.referralTo, c.plan.referralReason].filter(Boolean).join(': ')],
     ['Próximo control', c.plan.controlDate ? formatDate(c.plan.controlDate) : undefined],
@@ -120,7 +121,8 @@ export function consultationSummary(t: Tables, c: Consultation, diagnoses?: Diag
 }
 
 export function summaryAsText(sections: SummarySection[]): string {
-  return sections.map((s) => `${s.title.toUpperCase()}\n${s.rows.map((r) => `${r.label}: ${r.value}`).join('\n')}`).join('\n\n');
+  // El texto con formato empieza en una línea propia para que sus subtítulos y tablas se sigan reconociendo.
+  return sections.map((s) => `${s.title.toUpperCase()}\n${s.rows.map((r) => `${r.label}:${r.rich ? '\n' : ' '}${r.value}`).join('\n')}`).join('\n\n');
 }
 
 export { DX_KIND };

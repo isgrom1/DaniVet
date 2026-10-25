@@ -1,6 +1,7 @@
 import { PDFDocument, StandardFonts, rgb, degrees, type PDFFont, type PDFImage, type PDFPage } from 'pdf-lib';
 import type { Profile } from '@/data/schema';
 import { DEFAULT_APP_NAME } from '@/lib/platform';
+import { parseRichText, type Span } from '@/lib/richText';
 
 /**
  * Motor de maquetación simple sobre pdf-lib (fuentes estándar, sin dependencias de red).
@@ -41,6 +42,24 @@ const INK = rgb(0.106, 0.145, 0.141);
 const MUTED = rgb(0.41, 0.45, 0.44);
 const BRAND = rgb(0.122, 0.373, 0.341);
 const LINE = rgb(0.85, 0.82, 0.78);
+const WHITE = rgb(1, 1, 1);
+const ROW_SHADE = rgb(0.925, 0.953, 0.949);
+const TABLE_LINE = rgb(0.76, 0.82, 0.81);
+
+/** Trozo de texto con su fuente; una palabra puede mezclar negrita y texto normal («**Canigest**(probiótico)»). */
+interface Piece {
+  text: string;
+  font: PDFFont;
+  w: number;
+}
+interface Word {
+  pieces: Piece[];
+  w: number;
+}
+interface LaidLine {
+  words: Word[];
+  w: number;
+}
 
 export interface WriterOpts {
   paper: 'letter' | 'a4';
@@ -285,6 +304,172 @@ export class PdfWriter {
     );
     for (const r of rows) drawRow(r, this.font);
     this.y -= 4;
+  }
+
+  /** Texto con formato simple: subtítulos, viñetas, negritas y tablas (ver `lib/richText`). */
+  rich(t: string, size = 10.5) {
+    for (const b of parseRichText(t)) {
+      if (b.kind === 'space') this.y -= size * 0.6;
+      else if (b.kind === 'heading') {
+        this.ensure(size * 5);
+        this.y -= 7;
+        this.paragraph(b.spans, { size: size + 2, bold: true, color: BRAND });
+        this.y += 1;
+        this.rule(BRAND, 0.7);
+        this.y -= 5;
+      } else if (b.kind === 'bullet') {
+        this.y -= 1.5;
+        this.paragraph(b.spans, { x: this.margin + 16, size, bullet: true });
+      } else if (b.kind === 'paragraph') this.paragraph(b.spans, { size });
+      else this.richTable(b.header, b.rows, size - 1);
+    }
+  }
+
+  /** Tabla centrada con encabezado de color y filas alternadas; el encabezado se repite si cambia de página. */
+  richTable(header: Span[][], rows: Span[][][], size = 9.5) {
+    const pad = 7;
+    const lh = size * 1.3;
+    const space = this.font.widthOfTextAtSize(' ', size);
+    const widthOf = (spans: Span[], bold: boolean) => this.words(spans, size, bold).reduce((s, w, i) => s + w.w + (i ? space : 0), 0);
+    const longest = (spans: Span[], bold: boolean) => Math.max(0, ...this.words(spans, size, bold).map((w) => w.w));
+    const column = (i: number, f: (s: Span[], bold: boolean) => number) => Math.max(36, f(header[i], true), ...rows.map((r) => f(r[i] ?? [], false))) + pad * 2;
+    // Ancho para que cada celda quepa en una línea y mínimo para no cortar palabras.
+    const natural = header.map((_, i) => column(i, widthOf));
+    const minimum = header.map((_, i) => column(i, longest));
+    const sum = natural.reduce((a, b) => a + b, 0);
+    const minSum = minimum.reduce((a, b) => a + b, 0);
+    const target = Math.min(this.contentWidth, Math.max(sum * 1.3, this.contentWidth * 0.55));
+    let widths: number[];
+    if (sum <= target) widths = natural.map((w) => (w / sum) * target);
+    else if (minSum >= target) widths = minimum.map((w) => (w / minSum) * target);
+    else {
+      const flex = natural.map((w, i) => w - minimum[i]);
+      const flexSum = flex.reduce((a, b) => a + b, 0) || 1;
+      widths = minimum.map((w, i) => w + ((target - minSum) * flex[i]) / flexSum);
+    }
+    const x0 = this.margin + (this.contentWidth - target) / 2;
+    const drawRow = (cells: Span[][], head: boolean, shade: boolean) => {
+      const laid = widths.map((w, i) => this.layout(cells[i] ?? [], size, w - pad * 2, head));
+      const h = Math.max(...laid.map((l) => l.length)) * lh + 8;
+      if (this.y - h < this.margin + 34) {
+        this.newPage();
+        if (!head) drawRow(header, true, false);
+      }
+      let x = x0;
+      laid.forEach((lines, i) => {
+        this.page.drawRectangle({ x, y: this.y - h, width: widths[i], height: h, color: head ? BRAND : shade ? ROW_SHADE : WHITE, borderColor: TABLE_LINE, borderWidth: 0.6 });
+        let top = this.y - 4 - (h - 8 - lines.length * lh) / 2;
+        for (const line of lines) {
+          this.drawWords(line, x + (widths[i] - line.w) / 2, top - size, size, head ? WHITE : INK);
+          top -= lh;
+        }
+        x += widths[i];
+      });
+      this.y -= h;
+    };
+    this.ensure(lh * 3 + 24);
+    this.y -= 4;
+    drawRow(header, true, false);
+    rows.forEach((r, k) => drawRow(r, false, k % 2 === 1));
+    this.y -= 8;
+  }
+
+  /** Tabla de datos con el mismo estilo (por ejemplo, pacientes y pesos). */
+  dataTable(header: string[], rows: string[][], size = 9.5) {
+    const cell = (s: string): Span[] => [{ text: s, bold: false }];
+    this.richTable(header.map(cell), rows.map((r) => r.map(cell)), size);
+  }
+
+  /** Párrafo con negritas (o viñeta, con la viñeta a la izquierda de `x`). */
+  private paragraph(spans: Span[], o: { x?: number; size: number; bold?: boolean; color?: ReturnType<typeof rgb>; bullet?: boolean }) {
+    const x = o.x ?? this.margin;
+    const lh = o.size * 1.32;
+    this.layout(spans, o.size, this.width - this.margin - x, o.bold).forEach((line, i) => {
+      this.ensure(lh);
+      if (o.bullet && i === 0) this.page.drawText('•', { x: x - 11, y: this.y - o.size, size: o.size, font: this.font, color: o.color ?? INK });
+      this.drawWords(line, x, this.y - o.size, o.size, o.color ?? INK);
+      this.y -= lh;
+    });
+  }
+
+  /** Palabras de un texto con negritas, medidas con su fuente. */
+  private words(spans: Span[], size: number, bold = false): Word[] {
+    const out: Word[] = [];
+    // Un trozo pegado al anterior (sin espacio) continúa la misma palabra.
+    let joined = false;
+    for (const span of spans) {
+      const font = bold || span.bold ? this.bold : this.font;
+      for (const token of sanitize(span.text).split(/( +)/)) {
+        if (!token) continue;
+        if (!token.trim()) {
+          joined = false;
+          continue;
+        }
+        const piece = { text: token, font, w: font.widthOfTextAtSize(token, size) };
+        const last = out[out.length - 1];
+        if (joined && last) {
+          last.pieces.push(piece);
+          last.w += piece.w;
+        } else out.push({ pieces: [piece], w: piece.w });
+        joined = true;
+      }
+    }
+    return out;
+  }
+
+  /** Reparte las palabras en líneas de `maxWidth` como máximo (una palabra más larga que la línea se corta). */
+  private layout(spans: Span[], size: number, maxWidth: number, bold = false): LaidLine[] {
+    const space = this.font.widthOfTextAtSize(' ', size);
+    const lines: LaidLine[] = [];
+    let line: LaidLine = { words: [], w: 0 };
+    const push = (word: Word) => {
+      if (line.words.length && line.w + space + word.w > maxWidth) {
+        lines.push(line);
+        line = { words: [], w: 0 };
+      }
+      line.w += (line.words.length ? space : 0) + word.w;
+      line.words.push(word);
+    };
+    for (const word of this.words(spans, size, bold)) {
+      if (word.w <= maxWidth) push(word);
+      else for (const part of this.splitWord(word, size, maxWidth)) push(part);
+    }
+    if (line.words.length || !lines.length) lines.push(line);
+    return lines;
+  }
+
+  private splitWord(word: Word, size: number, maxWidth: number): Word[] {
+    const parts: Word[] = [];
+    let cur: Word = { pieces: [], w: 0 };
+    for (const p of word.pieces) {
+      for (const ch of p.text) {
+        const cw = p.font.widthOfTextAtSize(ch, size);
+        if (cur.w > 0 && cur.w + cw > maxWidth) {
+          parts.push(cur);
+          cur = { pieces: [], w: 0 };
+        }
+        const last = cur.pieces[cur.pieces.length - 1];
+        if (last && last.font === p.font) {
+          last.text += ch;
+          last.w += cw;
+        } else cur.pieces.push({ text: ch, font: p.font, w: cw });
+        cur.w += cw;
+      }
+    }
+    if (cur.pieces.length) parts.push(cur);
+    return parts;
+  }
+
+  private drawWords(line: LaidLine, x: number, y: number, size: number, color: ReturnType<typeof rgb>) {
+    const space = this.font.widthOfTextAtSize(' ', size);
+    let cx = x;
+    line.words.forEach((word, i) => {
+      if (i) cx += space;
+      for (const p of word.pieces) {
+        this.page.drawText(p.text, { x: cx, y, size, font: p.font, color });
+        cx += p.w;
+      }
+    });
   }
 
   async signature(o: { image?: Uint8Array; name?: string; lines?: string[]; caption?: string; x?: number; width?: number }) {

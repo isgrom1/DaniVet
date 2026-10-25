@@ -44,7 +44,8 @@ src/
   features/voice/                Dictado: interpretación del texto dictado (consulta y valores de exámenes)
   features/exams/                Exámenes, catálogo de valores, evolución (tabla y gráfico)
   features/ai/                   Lectura opcional de informes con IA (clave cifrada, envío a Claude, panel de lectura)
-  lib/                           Cifrado, IndexedDB, fechas, números, RUT, teléfonos, CSV, compartir archivos
+  lib/                           Cifrado, IndexedDB, fechas, números, RUT, teléfonos, CSV, compartir archivos,
+                                 formato simple de las indicaciones (richText.ts)
   pdf/                           Generación de PDF (pdf-lib, carga diferida)
   test/                          Configuración y utilidades de pruebas unitarias
 ```
@@ -141,6 +142,13 @@ Para publicar en otro hosting estático (Netlify, Cloudflare Pages, un dominio p
 - **Datos importantes sin registrar:** `missingImportant()` en `consultations/model.ts` (aviso, no bloquea la finalización).
 - **Valores de exámenes:** catálogo en `src/features/exams/analytes.ts` (nombres, unidades habituales, sinónimos; **sin rangos**), dictado o texto pegado en `src/features/voice/labs.ts` (miles chilenos "250.000", "250 mil", "%", rangos con palabra clave "referencia 0,5 a 1,5" o como vienen en un informe "0,5 - 1,5", "(37 - 55)", "< 120"; unidades del informe como "x10^3/uL", "/mm3", "g/L" o "µmol/L"; siglas entre paréntesis "ALT (GPT)"; marcas "H"/"*"; tira de orina "dos cruces"; el valor debe estar en la misma línea que su nombre y lo no reconocido se informa por línea), formulario en `LabValuesEditor.tsx`, evolución en `trends.ts` (filas por valor y grupo de unidad; recuentos /µL ↔ ×10³/µL se convierten, % va en otra fila; la fecha de cada examen es la toma de muestra o, si falta, la solicitud), tabla y filtros en `LabTrends.tsx`, gráfico en `LabChart.tsx` (colores validados por contraste y daltonismo: serie `#00876c`, fuera de rango `#b45309` con forma ▲/▼ además del color; la lista de valores es su equivalente accesible).
 - **Mejora posible (requiere autorización):** interpretar el dictado de la consulta con un modelo de lenguaje daría más flexibilidad. Podría usar la misma clave propia que la lectura de informes (sin servidor intermedio), pero implica un costo por uso y enviar texto clínico a un tercero.
+
+### Indicaciones con formato y para varios pacientes (1.4.0)
+
+- **Formato simple** (`src/lib/richText.ts`): se guarda como texto en los mismos campos, sin cambiar el esquema. `## Título` = subtítulo; `• texto` o `- texto` = viñeta; `**texto**` = negrita; dos o más líneas seguidas con `|` = tabla (la primera es el encabezado; se ignora la línea `---` de Markdown; una sola línea con `|` sigue siendo texto). La barra de formato (`src/components/RichText.tsx`, `RichTextArea`) inserta las marcas con funciones puras (`toggleLinePrefix`, `toggleBold`, `tableAt`, `tableText`, `insertBlock`); las tablas se escriben celda por celda en una hoja (2 a 4 columnas).
+- **Dónde se usa:** `plan.homeCare` y `plan.ownerRecommendations` de la consulta, y los campos «Indicaciones» y «Signos de alarma» del documento de indicaciones. El PDF lo dibuja con `PdfWriter.rich()` (`src/pdf/engine.ts`): subtítulo en color con línea inferior, viñetas con sangría, negritas dentro de la línea y tablas centradas con encabezado de color y filas alternadas (el encabezado se repite si la tabla cambia de página). Si el texto empieza con un subtítulo propio, ese subtítulo reemplaza al título de la sección. El informe clínico y la ficha completa muestran el mismo texto sin marcas (`plainRichText`); la consulta finalizada lo muestra con formato (`RichTextView`).
+- **Varios pacientes:** `ownerInstructionsPdf(consultaId, otrosPacientes)` (los elige la profesional al tocar «Indicaciones al tutor»; solo se ofrecen pacientes activos del mismo tutor y ninguno viene marcado). El documento de indicaciones guarda `documents.otherPatientIds` (campo opcional nuevo, sin migración; relación verificada en `relations.ts`), y aparece también en la historia de esos pacientes.
+- **Peso:** el de la atención (`exam.weightKg`) o, si no hay, el último registrado (`latestWeight`), con su fecha si es de otro día; sin registro se escribe «Sin registro» (nunca se completa un valor).
 
 ### Lectura de informes con IA (opcional)
 
